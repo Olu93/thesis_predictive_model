@@ -1,23 +1,24 @@
 import math
 import random
 from enum import Enum, auto
-from typing import Dict, Iterable, List
+from typing import Counter, Dict, Iterable, Iterator, List, Union
 import pathlib
 import pandas as pd
 import pm4py
 from IPython.display import display
 from pm4py.algo.discovery.alpha import algorithm as alpha_miner
 from pm4py.algo.discovery.dfg import algorithm as dfg_discovery
-from pm4py.statistics.traces.generic.log import case_statistics
 from pm4py.util import constants
 from pm4py.visualization.dfg import visualizer as dfg_visualization
 from pm4py.visualization.graphs import visualizer as graphs_visualizer
 from pm4py.visualization.petrinet import visualizer as petrinet_visualization
-from torch.utils.data import DataLoader, Dataset
+from tensorflow.python.keras.utils.np_utils import to_categorical
 from tqdm import tqdm
-import torch
+import tensorflow_datasets as tfds
 import io
 import numpy as np
+from keras.preprocessing.sequence import pad_sequences
+from sklearn.model_selection import train_test_split
 
 
 class TaskModes(Enum):
@@ -33,7 +34,9 @@ class DatasetModes(Enum):
     TEST = auto()
 
 
-class AbstractProcessLogReader(Dataset):
+class AbstractProcessLogReader():
+    """DatasetBuilder for my_dataset dataset."""
+
     log = None
     data_path: str = None
     _original_data: pd.DataFrame = None
@@ -42,7 +45,7 @@ class AbstractProcessLogReader(Dataset):
     caseId: str = None
     activityId: str = None
     _vocab: dict = None
-    modes: TaskModes = TaskModes.SIMPLE
+    mode: TaskModes = TaskModes.SIMPLE
     padding_token: str = "<PAD>"
     transform = None
 
@@ -55,7 +58,7 @@ class AbstractProcessLogReader(Dataset):
                  max_tokens: int = None,
                  **kwargs) -> None:
         super().__init__(**kwargs)
-        self.max_tokens = None
+        self.vocab_len = None
         self.debug = debug
         self.mode = mode
         self.data_path = pathlib.Path(data_path)
@@ -71,8 +74,8 @@ class AbstractProcessLogReader(Dataset):
             display(self._original_data.head())
         self.preprocess_level_general()
         self.preprocess_level_specialized()
-        self.compute_sequences()
         self.register_vocabulary()
+        self.compute_sequences()
 
     def show_dfg(self):
         dfg = dfg_discovery.apply(self.log)
@@ -96,34 +99,46 @@ class AbstractProcessLogReader(Dataset):
     def preprocess_level_specialized(self, **kwargs):
         self.data = self.data
 
+    def register_vocabulary(self):
+        all_unique_tokens = list(self.data[self.activityId].unique()) + [self.padding_token]
+        self.vocab_len = len(all_unique_tokens) + 1
+
+        self._vocab = {word: idx for idx, word in enumerate(all_unique_tokens, 1)}
+        self._vocab_r = {idx: word for word, idx in self._vocab.items()}
+
     def compute_sequences(self):
         grouped_traces = list(self.data.groupby(by=self.caseId))
 
         self._traces = {idx: list(df[self.activityId].values) for idx, df in grouped_traces}
-
+        self.length_distribution = Counter([len(tr) for tr in self._traces.values()])
+        self.max_len = self.length_distribution.most_common(1)[0][0]
         self.instantiate_dataset()
 
     def instantiate_dataset(self):
         loader = tqdm(self._traces.values(), total=len(self._traces))
-
+        loader = ([self.vocab2idx[word] for word in tr] for tr in loader)
         if self.mode == TaskModes.SIMPLE:
-            self.traces = list(loader)
+            self.traces = ([tr[0:-1], tr[1:]] for tr in loader if len(tr) > 1)
 
         if self.mode == TaskModes.EXTENSIVE:
-            self.traces = [tr[0:end] for tr in loader for end in range(2, len(tr) + 1) if len(tr) > 1]
+            self.traces = ([tr[0:end - 1], tr[1:end]] for tr in loader for end in range(2, len(tr) + 1) if len(tr) > 1)
 
         if self.mode == TaskModes.EXTENSIVE_RANDOM:
             tmp_traces = [tr[random.randint(0, len(tr) - 1):] for tr in loader for sample in self._heuristic_bounded_sample_size(tr) if len(tr) > 1]
             self.traces = [tr[:random.randint(2, len(tr))] for tr in tqdm(tmp_traces, desc="random-samples") if len(tr) > 1]
 
         if self.mode == TaskModes.FINAL_OUTCOME:
-            self.traces = [tr[0:end] + tr[-1] for tr in loader for end in range(2, len(tr)) if len(tr) > 1]
+            self.traces = ([tr[0:-1], tr[-1] * (len(tr) - 1)] for tr in loader if len(tr) > 1)
 
-        self.trace_data, self.test_traces = self._train_test_split(self.traces)
-        self.train_traces, self.val_traces = self._train_val_split(self.trace_data)
-        print(f"Test: {len(self.test_traces)} datapoints")
-        print(f"Train: {len(self.train_traces)} datapoints")
-        print(f"Val: {len(self.val_traces)} datapoints")
+        self.traces, self.targets = zip(*[tr_couple for tr_couple in tqdm(self.traces)])
+        self.padded_traces = pad_sequences(self.traces, self.max_len, padding='post')
+        self.padded_targets = pad_sequences(self.targets, self.max_len, padding='post')
+
+        self.trace_data, self.trace_test, self.target_data, self.target_test = train_test_split(self.padded_traces, self.padded_targets)
+        self.trace_train, self.trace_val, self.target_train, self.target_val = train_test_split(self.trace_data, self.target_data)
+        print(f"Test: {len(self.trace_test)} datapoints")
+        print(f"Train: {len(self.trace_train)} datapoints")
+        print(f"Val: {len(self.trace_val)} datapoints")
 
     def _heuristic_sample_size(self, sequence):
         return range((len(sequence)**2 + len(sequence)) // 4)
@@ -153,13 +168,6 @@ class AbstractProcessLogReader(Dataset):
         val_traces = traces[:len_val_traces]
         return train_traces, val_traces
 
-    def register_vocabulary(self):
-        all_unique_tokens = list(self.data[self.activityId].unique()) + [self.padding_token]
-        self.max_tokens = len(all_unique_tokens)
-        
-        self._vocab = {word: idx for idx, word in enumerate(all_unique_tokens)}
-        self._vocab_r = {idx: word for word, idx in self._vocab.items()}
-
     @property
     def tokens(self) -> List[str]:
         return list(self._vocab.keys())
@@ -172,16 +180,19 @@ class AbstractProcessLogReader(Dataset):
     def idx2vocab(self) -> List[str]:
         return self._vocab_r
 
-    def __len__(self):
-        return len(self.train_traces)
+    def _generate_examples(self, is_train=True) -> Iterator[Dict[str, list]]:
+        """Generator of examples for each split."""
+        data = zip(self.trace_train, self.target_train) if is_train else zip(self.trace_train, self.target_train)
+        for trace, target in data:
+            yield trace, to_categorical(target, num_classes=self.vocab_len)
 
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-        X, y = [self.vocab2idx[wrd] for wrd in self.train_traces[idx][:-1]], [self.vocab2idx[self.train_traces[idx][-1]]]
-        sample = {'sequence': X, 'target': y}
+    # def __getitem__(self, idx):
+    #     if torch.is_tensor(idx):
+    #         idx = idx.tolist()
+    #     X, y = [self.vocab2idx[wrd] for wrd in self.train_traces[idx][:-1]], [self.vocab2idx[self.train_traces[idx][-1]]]
+    #     sample = {'sequence': X, 'target': y}
 
-        if self.transform:
-            sample = self.transform(sample)
+    #     if self.transform:
+    #         sample = self.transform(sample)
 
-        return sample
+    #     return sample

@@ -1,5 +1,5 @@
-from readers.AbstractProcessLogReader import AbstractProcessLogReader
-
+from readers.AbstractProcessLogReader import AbstractProcessLogReader, TaskModes
+import tensorflow as tf
 
 class RequestForPaymentLogReader(AbstractProcessLogReader):
     def __init__(self, **kwargs) -> None:
@@ -34,5 +34,7 @@ class RequestForPaymentLogReader(AbstractProcessLogReader):
         )
 
 if __name__ == '__main__':
-    data = RequestForPaymentLogReader()
-    print(data.__getitem__(3))
+    data = RequestForPaymentLogReader(mode=TaskModes.SIMPLE)
+    ds_counter = tf.data.Dataset.from_generator(data._generate_examples, args=[True], output_types=(tf.int64, tf.int64), output_shapes = ((None,), (None,)))
+
+    print(next(iter(ds_counter.repeat().batch(10).take(10))))

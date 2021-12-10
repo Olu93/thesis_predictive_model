@@ -3,5 +3,5 @@
     "python.formatting.yapfArgs": [
         "--style={ based_on_style: pep8, column_limit: 180 }"
     ],
-    "python.pythonPath": "C:\\Users\\ohund\\Anaconda3\\envs\\pytorch\\python.exe",
+    "python.pythonPath": "C:\\Users\\ohund\\Anaconda3\\envs\\ds\\python.exe",
 }

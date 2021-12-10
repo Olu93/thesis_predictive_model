@@ -17,6 +17,12 @@
       "module": "readers.RequestForPaymentLogReader"
     },
     {
+      "name": "Load Run",
+      "type": "python",
+      "request": "launch",
+      "module": "runner.Run"
+    },
+    {
       "name": "Python: Aktuelle Datei",
       "type": "python",
       "request": "launch",

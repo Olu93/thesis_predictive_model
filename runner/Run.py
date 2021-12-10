@@ -1,32 +1,33 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from models.SimpleLSTM import LSTMTagger
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM, InputLayer, Bidirectional, TimeDistributed, Embedding, Activation
+from tensorflow.keras.optimizers import Adam
+import tensorflow as tf
+
+physical_devices = tf.config.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 from readers import RequestForPaymentLogReader
 
-data = RequestForPaymentLogReader()
-vocab_size = data.max_tokens
-EMBEDDING_DIM = 6
-HIDDEN_DIM = 6
+if __name__ == "__main__":
+    data = RequestForPaymentLogReader(debug=True)
+    dataset = tf.data.Dataset.from_generator(
+        data._generate_examples,
+        args=[True],
+        output_types=(tf.int64, tf.int64),
+        output_shapes=((None, ), (
+            None,
+            None,
+        )),
+    ).batch(1)
 
-model = LSTMTagger(EMBEDDING_DIM, HIDDEN_DIM, vocab_size, vocab_size)
-loss_function = nn.NLLLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.1)
-
-for epoch in range(300):  # again, normally you would NOT do 300 epochs, it is toy data
-    for instance in data:
-        sequence = instance['sequence']
-        targets = instance['targets']
-        # Step 1. Remember that Pytorch accumulates gradients.
-        # We need to clear them out before each instance
-        model.zero_grad()
-
-        # Step 3. Run our forward pass.
-        tag_scores = model()
-
-        # Step 4. Compute the loss, gradients, and update the parameters by
-        #  calling optimizer.step()
-        loss = loss_function(tag_scores, targets)
-        loss.backward()
-        optimizer.step()
+    model = Sequential()
+    model.add(InputLayer(input_shape=(data.max_len,)))
+    model.add(Embedding(data.vocab_len, 128))
+    model.add(LSTM(256, return_sequences=True))
+    model.add(TimeDistributed(Dense(data.vocab_len)))
+    model.add(Activation('softmax'))
+    model.compile(loss='categorical_crossentropy', optimizer=Adam(0.001), metrics=['accuracy'])
+    model.summary()
+    sample = next(iter(dataset))
+    # model(sample[0])
+    # train_y_onehot = tf.keras.utils.to_categorical(train_y, num_classes=data.vocab_len, dtype='float32')
+    model.fit(dataset, batch_size=10, epochs=3)
