@@ -2,7 +2,6 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, InputLayer, Bidirectional, TimeDistributed, Embedding, Activation
 from tensorflow.keras.optimizers import Adam
 import tensorflow as tf
-from models.lstm import ProcessLSTMSimpleModel
 
 from readers.BPIC12 import BPIC12W
 from readers import RequestForPaymentLogReader
@@ -18,8 +17,12 @@ if __name__ == "__main__":
     val_dataset = data.get_val_dataset()
     test_dataset = data.get_test_dataset()
 
-    model = ProcessLSTMSimpleModel(data.vocab_len, data.max_len)
-    model.build((None, data.max_len))
+    model = Sequential()
+    model.add(InputLayer(input_shape=(data.max_len,)))
+    model.add(Embedding(data.vocab_len, 10, mask_zero=True))
+    model.add(Bidirectional(LSTM(20, return_sequences=True)))
+    model.add(TimeDistributed(Dense(data.vocab_len)))
+    model.add(Activation('softmax'))
     model.compile(loss='categorical_crossentropy', optimizer=Adam(0.001), metrics=['accuracy'])
     model.summary()
     # sample = next(iter(train_dataset))
