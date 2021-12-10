@@ -19,6 +19,7 @@ import io
 import numpy as np
 from keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
+import tensorflow as tf
 
 
 class TaskModes(Enum):
@@ -38,7 +39,7 @@ class AbstractProcessLogReader():
     """DatasetBuilder for my_dataset dataset."""
 
     log = None
-    data_path: str = None
+    log_path: str = None
     _original_data: pd.DataFrame = None
     data: pd.DataFrame = None
     debug: bool = False
@@ -50,7 +51,8 @@ class AbstractProcessLogReader():
     transform = None
 
     def __init__(self,
-                 data_path: str,
+                 log_path: str,
+                 csv_path: str,
                  caseId: str = 'case:concept:name',
                  activityId: str = 'concept:name',
                  debug=False,
@@ -61,21 +63,31 @@ class AbstractProcessLogReader():
         self.vocab_len = None
         self.debug = debug
         self.mode = mode
-        self.data_path = pathlib.Path(data_path)
+        self.log_path = pathlib.Path(log_path)
+        self.csv_path = pathlib.Path(csv_path)
         self.caseId = caseId
         self.activityId = activityId
-        self.log = pm4py.read_xes(self.data_path.as_posix())
+
+    def init_log(self, save=False):
+        self.log = pm4py.read_xes(self.log_path.as_posix())
         if self.debug:
             print(self.log[1])  #prints the first event of the first trace of the given log
         if self.debug:
             print(self.log[1][0])  #prints the first event of the first trace of the given log
         self._original_data = pm4py.convert_to_dataframe(self.log)
+        if save:
+            self._original_data.to_csv(self.csv_path)
+        return self
+
+    def init_data(self):
+        self._original_data = self._original_data if self._original_data is not None else pd.read_csv(self.csv_path)
         if self.debug:
             display(self._original_data.head())
         self.preprocess_level_general()
         self.preprocess_level_specialized()
         self.register_vocabulary()
         self.compute_sequences()
+        return self
 
     def show_dfg(self):
         dfg = dfg_discovery.apply(self.log)
@@ -146,27 +158,50 @@ class AbstractProcessLogReader():
     def _heuristic_bounded_sample_size(self, sequence):
         return range(min((len(sequence)**2 + len(sequence) // 4), 5))
 
-    def _train_test_split(self, traces):
-        traces = list(traces)
-        random.shuffle(traces)
-        len_dataset = len(traces)
-        len_train_traces = int(len_dataset * 0.8)
-        train_traces = traces[:len_train_traces]
-        # len_val_traces = int(len_dataset * 0.6)
-        # val_traces = traces[:len_val_traces]
-        len_test_traces = int(len_dataset * 0.2)
-        test_traces = traces[:len_test_traces]
-        return train_traces, test_traces
+    def _generate_examples(self, set_name='train') -> Iterator[Dict[str, list]]:
+        """Generator of examples for each split."""
+        data = None
+        if set_name == b'train':
+            data = zip(self.trace_train, self.target_train)
+        if set_name == b'val':
+            data = zip(self.trace_val, self.target_val)
+        if set_name == b'test':
+            data = zip(self.trace_test, self.target_test)
+        for trace, target in data:
+            yield trace, to_categorical(target, num_classes=self.vocab_len)
 
-    def _train_val_split(self, traces):
-        traces = list(traces)
-        random.shuffle(traces)
-        len_dataset = len(traces)
-        len_train_traces = int(len_dataset * 0.6)
-        train_traces = traces[:len_train_traces]
-        len_val_traces = int(len_dataset * 0.4)
-        val_traces = traces[:len_val_traces]
-        return train_traces, val_traces
+    def get_train_dataset(self):
+        return tf.data.Dataset.from_generator(
+            self._generate_examples,
+            args=['train'],
+            output_types=(tf.int64, tf.int64),
+            output_shapes=((None, ), (
+                None,
+                None,
+            )),
+        ).batch(1)
+
+    def get_val_dataset(self):
+        return tf.data.Dataset.from_generator(
+            self._generate_examples,
+            args=['val'],
+            output_types=(tf.int64, tf.int64),
+            output_shapes=((None, ), (
+                None,
+                None,
+            )),
+        ).batch(1)
+
+    def get_test_dataset(self):
+        return tf.data.Dataset.from_generator(
+            self._generate_examples,
+            args=['test'],
+            output_types=(tf.int64, tf.int64),
+            output_shapes=((None, ), (
+                None,
+                None,
+            )),
+        ).batch(1)
 
     @property
     def tokens(self) -> List[str]:
@@ -180,11 +215,7 @@ class AbstractProcessLogReader():
     def idx2vocab(self) -> List[str]:
         return self._vocab_r
 
-    def _generate_examples(self, is_train=True) -> Iterator[Dict[str, list]]:
-        """Generator of examples for each split."""
-        data = zip(self.trace_train, self.target_train) if is_train else zip(self.trace_train, self.target_train)
-        for trace, target in data:
-            yield trace, to_categorical(target, num_classes=self.vocab_len)
+
 
     # def __getitem__(self, idx):
     #     if torch.is_tensor(idx):
@@ -196,3 +227,10 @@ class AbstractProcessLogReader():
     #         sample = self.transform(sample)
 
     #     return sample
+
+
+if __name__ == '__main__':
+    data = AbstractProcessLogReader(log_path='data/RequestForPayment.xes_', csv_path='data/RequestForPayment.csv', mode=TaskModes.SIMPLE).init_log(save=True).init_data()
+    ds_counter = data.get_train_dataset()
+
+    print(next(iter(ds_counter.repeat().batch(10).take(10))))

@@ -4,6 +4,13 @@
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
+
+    {
+      "name": "Load AbstractProcessLogReader",
+      "type": "python",
+      "request": "launch",
+      "module": "readers.AbstractProcessLogReader"
+    },
     {
       "name": "Load BPIC12",
       "type": "python",
@@ -17,7 +24,7 @@
       "module": "readers.RequestForPaymentLogReader"
     },
     {
-      "name": "Load Run",
+      "name": "Run",
       "type": "python",
       "request": "launch",
       "module": "runner.Run"
