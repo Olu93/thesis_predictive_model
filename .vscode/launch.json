@@ -1,0 +1,27 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Load BPIC12",
+      "type": "python",
+      "request": "launch",
+      "module": "readers.BPIC12"
+    },
+    {
+      "name": "Load RequestForPayment",
+      "type": "python",
+      "request": "launch",
+      "module": "readers.RequestForPaymentLogReader"
+    },
+    {
+      "name": "Python: Aktuelle Datei",
+      "type": "python",
+      "request": "launch",
+      "program": "./model_example.py",
+      "console": "internalConsole"
+    }
+  ]
+}
