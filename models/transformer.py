@@ -6,22 +6,22 @@ from tensorflow.keras.models import Model
 
 
 class TransformerModel(Model):
-    def __init__(self, vocab_len, max_len, embed_dim=10, ff_dim=10, num_heads=3, rate=0.1):
+    def __init__(self, vocab_len, max_len, embed_dim=10, ff_dim=10, num_heads=3, rate1=0.1, rate2=0.1):
         super(TransformerModel, self).__init__()
         # self.inputs = InputLayer(input_shape=(max_len,))
         self.embedding = TokenAndPositionEmbedding(max_len, vocab_len, embed_dim)
-        self.transformer_block = TransformerBlock(embed_dim, num_heads, ff_dim)
-        self.avg_pooling_layer = layers.GlobalAveragePooling1D()
-        self.dropout1 = Dropout(rate)
+        self.transformer_block = TransformerBlock(embed_dim, num_heads, ff_dim, rate1)
+        # self.avg_pooling_layer = layers.GlobalAveragePooling1D()
+        self.dropout1 = Dropout(rate2)
         self.dense = Dense(20, activation='relu')
-        self.dropout2 = Dropout(rate)
+        self.dropout2 = Dropout(rate2)
         self.output_layer = TimeDistributed(Dense(vocab_len))
         self.activation_layer = Activation('softmax')
 
     def call(self, inputs):
         x = self.embedding(inputs)
         x = self.transformer_block(x)
-        x = self.avg_pooling_layer(x)
+        # x = self.avg_pooling_layer(x)
         x = self.dropout1(x)
         x = self.dense(x)
         x = self.dropout2(x)
