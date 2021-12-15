@@ -112,10 +112,11 @@ class AbstractProcessLogReader():
         self.data = self.data
 
     def register_vocabulary(self):
-        all_unique_tokens = list(self.data[self.activityId].unique()) + [self.padding_token]
-        self.vocab_len = len(all_unique_tokens) + 1
+        all_unique_tokens = list(self.data[self.activityId].unique())
 
         self._vocab = {word: idx for idx, word in enumerate(all_unique_tokens, 1)}
+        self._vocab[self.padding_token] = 0
+        self.vocab_len = len(self._vocab)
         self._vocab_r = {idx: word for word, idx in self._vocab.items()}
 
     def compute_sequences(self):
@@ -123,7 +124,7 @@ class AbstractProcessLogReader():
 
         self._traces = {idx: list(df[self.activityId].values) for idx, df in grouped_traces}
         self.length_distribution = Counter([len(tr) for tr in self._traces.values()])
-        self.max_len = self.length_distribution.most_common(1)[0][0]
+        self.max_len = max(list(self.length_distribution.keys()))
         self.instantiate_dataset()
 
     def instantiate_dataset(self):
@@ -161,11 +162,12 @@ class AbstractProcessLogReader():
     def _generate_examples(self, set_name='train') -> Iterator[Dict[str, list]]:
         """Generator of examples for each split."""
         data = None
-        if set_name == b'train':
+        set_name = set_name.decode('utf8') if type(set_name) != str else set_name
+        if set_name == 'train':
             data = zip(self.trace_train, self.target_train)
-        if set_name == b'val':
+        if set_name == 'val':
             data = zip(self.trace_val, self.target_val)
-        if set_name == b'test':
+        if set_name == 'test':
             data = zip(self.trace_test, self.target_test)
         for trace, target in data:
             yield trace, to_categorical(target, num_classes=self.vocab_len)
@@ -215,8 +217,6 @@ class AbstractProcessLogReader():
     def idx2vocab(self) -> List[str]:
         return self._vocab_r
 
-
-
     # def __getitem__(self, idx):
     #     if torch.is_tensor(idx):
     #         idx = idx.tolist()
@@ -230,7 +230,8 @@ class AbstractProcessLogReader():
 
 
 if __name__ == '__main__':
-    data = AbstractProcessLogReader(log_path='data/RequestForPayment.xes_', csv_path='data/RequestForPayment.csv', mode=TaskModes.SIMPLE).init_log(save=True).init_data()
+    data = AbstractProcessLogReader(log_path='data/RequestForPayment.xes_', csv_path='data/RequestForPayment.csv', mode=TaskModes.SIMPLE).init_data()
     ds_counter = data.get_train_dataset()
 
-    print(next(iter(ds_counter.repeat().batch(10).take(10))))
+    print(next(iter(ds_counter.take(10)))[0].shape)
+    print(next(iter(ds_counter))[0].shape)
