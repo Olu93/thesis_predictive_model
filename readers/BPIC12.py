@@ -14,8 +14,10 @@ class BPIC12W(AbstractProcessLogReader):
     
 
     def __init__(self, **kwargs) -> None:
+        self.subset = kwargs.get('subset', BPIC12W.subsets.AW)
+        if 'subset' in kwargs:
+            del kwargs['subset']
         super().__init__(log_path ='data/financial_log.xes', csv_path ='data/financial_log.csv', **kwargs)
-        self.subset = kwargs.get('subsets', BPIC12W.subsets.AW)
 
     def preprocess_level_general(self):
         super().preprocess_level_general(remove_cols=[])
