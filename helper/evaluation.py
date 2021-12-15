@@ -48,24 +48,29 @@ def results_by_instance(data, test_dataset, model, save_path = None):
     test_set_list = list()
     for instance in test_dataset:
         test_set_list.append(instance)
-    
+    X_test, y_test = zip(*test_set_list)
+    X_test, y_test = np.vstack(X_test), np.vstack(y_test).argmax(axis=-1)
+    non_zero_indices = np.nonzero(y_test)
+    non_zero_mask = np.zeros_like(X_test)
+    non_zero_mask[non_zero_indices] = 1 
     print("Step 2: Compute metrics")
     eval_results = {}
-    for idx, (X_test, y_test) in tqdm(enumerate(test_set_list), total=len(test_set_list)):
-        X_test, y_test = np.vstack(X_test), np.vstack(y_test)
-        y_pred = model.predict(X_test)
-        non_zero_indices = np.nonzero(y_test.argmax(axis=-1).flatten())[0]
-        flat_y_test = y_test.argmax(axis=-1).flatten()[non_zero_indices]
-        flat_y_pred = y_pred.argmax(axis=-1).flatten()[non_zero_indices]
+    seq_lens = non_zero_mask.sum(axis=-1)
+    y_pred_masked = model.predict(X_test).argmax(axis=-1) * non_zero_mask
+    y_test_masked = y_test * non_zero_mask
+    iterator = enumerate(zip(y_pred_masked, y_test_masked))
+    for idx, (row_y_pred, row_y_test) in tqdm(iterator, total=len(y_pred_masked)):
         labels_2_include = range(1, data.vocab_len)
+        take_non_zeros = np.nonzero(row_y_test)
+        row_y_pred_zeros, row_y_test_zeros = row_y_pred[take_non_zeros], row_y_test[take_non_zeros]
         eval_results[idx] = {
-            "len_seq": len(flat_y_test), 
-            "acc": accuracy_score(flat_y_test, flat_y_pred),
-            "recall": recall_score(flat_y_test, flat_y_pred, labels=labels_2_include, average='micro'),
-            "precision": precision_score(flat_y_test, flat_y_pred, labels=labels_2_include, average='micro'),
-            "f1": f1_score(flat_y_test, flat_y_pred, labels=labels_2_include, average='micro'),
-        }
-
+            "len_seq": seq_lens[idx], 
+            "acc": accuracy_score(row_y_pred_zeros, row_y_test_zeros),
+            "recall": recall_score(row_y_pred_zeros, row_y_test_zeros, average='micro'),
+            "precision": precision_score(row_y_pred_zeros, row_y_test_zeros, average='micro'),
+            "f1": f1_score(row_y_pred_zeros, row_y_test_zeros, average='micro'),
+        }   
+    
     results = pd.DataFrame(eval_results).T.sort_index()
     print(results)
     print("Step 3: Save results")
@@ -84,8 +89,8 @@ if __name__ == "__main__":
     model.compile(loss='categorical_crossentropy', optimizer=Adam(0.001), metrics=[CategoricalAccuracy()])
     model.summary()
 
-    # model.fit(train_dataset, batch_size=10, epochs=1, validation_data=val_dataset)
+    model.fit(train_dataset, batch_size=10, epochs=1, validation_data=val_dataset)
 
-    results_by_instance(data, test_dataset, model, 'test_results_by_instance.csv')
+    results_by_instance(data, test_dataset, model, 'test_results_by_instance_.csv')
     results_by_len(data, test_dataset, model, 'test_results_by_len.csv')
     
