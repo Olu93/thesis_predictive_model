@@ -37,7 +37,7 @@ class DatasetModes(Enum):
 
 class AbstractProcessLogReader():
     """DatasetBuilder for my_dataset dataset."""
-
+    
     log = None
     log_path: str = None
     _original_data: pd.DataFrame = None

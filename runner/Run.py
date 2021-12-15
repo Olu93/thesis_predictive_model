@@ -4,6 +4,7 @@ from tensorflow.keras.optimizers import Adam
 import tensorflow as tf
 from helper.evaluation import results_by_instance, results_by_len
 from models.lstm import ProcessLSTMSimpleModel
+from models.transformer import TransformerModel
 
 from readers.BPIC12 import BPIC12W
 from readers import RequestForPaymentLogReader
@@ -19,7 +20,7 @@ if __name__ == "__main__":
     val_dataset = data.get_val_dataset()
     test_dataset = data.get_test_dataset()
 
-    model = ProcessLSTMSimpleModel(data.vocab_len, data.max_len)
+    model = TransformerModel(data.vocab_len, data.max_len)
     model.build((None, data.max_len))
     model.compile(loss='categorical_crossentropy', optimizer=Adam(0.001), metrics=['accuracy'])
     model.summary()
