@@ -12,6 +12,12 @@
       "module": "readers.AbstractProcessLogReader"
     },
     {
+      "name": "Test Helper",
+      "type": "python",
+      "request": "launch",
+      "module": "helper.${fileBasenameNoExtension}"
+    },
+    {
       "name": "Load BPIC12",
       "type": "python",
       "request": "launch",

@@ -2,6 +2,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, InputLayer, Bidirectional, TimeDistributed, Embedding, Activation
 from tensorflow.keras.optimizers import Adam
 import tensorflow as tf
+from helper.evaluation import results_by_instance, results_by_len
 from models.lstm import ProcessLSTMSimpleModel
 
 from readers.BPIC12 import BPIC12W
@@ -22,8 +23,10 @@ if __name__ == "__main__":
     model.build((None, data.max_len))
     model.compile(loss='categorical_crossentropy', optimizer=Adam(0.001), metrics=['accuracy'])
     model.summary()
-    # sample = next(iter(train_dataset))
-    # model(sample[0])
-    # train_y_onehot = tf.keras.utils.to_categorical(train_y, num_classes=data.vocab_len, dtype='float32')
-    model.fit(train_dataset, batch_size=10, epochs=1, validation_data=val_dataset)
-    model.predict(test_dataset)
+    
+
+    model.fit(train_dataset, batch_size=10, epochs=2, validation_data=val_dataset)
+    
+    results_by_instance(data, test_dataset, model, 'test_results_by_instance.csv')
+    results_by_len(data, test_dataset, model, 'test_results_by_len.csv')
+
