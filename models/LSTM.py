@@ -9,13 +9,13 @@ from readers import RequestForPaymentLogReader
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
-
+# https://keras.io/guides/functional_api/
 class ProcessLSTMSimpleModel(Model):
-    def __init__(self, vocab_len, max_len):
+    def __init__(self, vocab_len, max_len, embed_dim=10, ff_dim=20):
         super(ProcessLSTMSimpleModel, self).__init__()
         # self.inputs = InputLayer(input_shape=(max_len,))
-        self.embedding = Embedding(vocab_len, 10, mask_zero=True)
-        self.lstm_layer = Bidirectional(LSTM(20, return_sequences=True))
+        self.embedding = Embedding(vocab_len, embed_dim, mask_zero=True)
+        self.lstm_layer = Bidirectional(LSTM(ff_dim, return_sequences=True))
         self.time_distributed_layer = TimeDistributed(Dense(vocab_len))
         self.activation_layer = Activation('softmax')
 
@@ -25,4 +25,5 @@ class ProcessLSTMSimpleModel(Model):
         x = self.lstm_layer(x)
         x = self.time_distributed_layer(x)
         y_pred = self.activation_layer(x)
+        
         return y_pred
