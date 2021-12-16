@@ -37,7 +37,7 @@ class DatasetModes(Enum):
 
 class AbstractProcessLogReader():
     """DatasetBuilder for my_dataset dataset."""
-    
+
     log = None
     log_path: str = None
     _original_data: pd.DataFrame = None
@@ -76,7 +76,7 @@ class AbstractProcessLogReader():
             print(self.log[1][0])  #prints the first event of the first trace of the given log
         self._original_data = pm4py.convert_to_dataframe(self.log)
         if save:
-            self._original_data.to_csv(self.csv_path)
+            self._original_data.to_csv(self.csv_path, index=False)
         return self
 
     def init_data(self):
@@ -128,6 +128,7 @@ class AbstractProcessLogReader():
         self.instantiate_dataset()
 
     def instantiate_dataset(self):
+        print("Preprocess data")
         loader = tqdm(self._traces.values(), total=len(self._traces))
         loader = ([self.vocab2idx[word] for word in tr] for tr in loader)
         if self.mode == TaskModes.SIMPLE:
