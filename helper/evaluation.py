@@ -71,27 +71,29 @@ def results_by_instance(idx2vocab, test_dataset, model, save_path=None, mode='we
     non_zero_mask[non_zero_indices] = 1
 
     print(STEP2)
-    eval_results = {}
+    eval_results = []
     seq_lens = non_zero_mask.sum(axis=-1)
     y_pred_masked = model.predict(X_test).argmax(axis=-1) * non_zero_mask
     y_test_masked = y_test * non_zero_mask
     iterator = enumerate(zip(y_test_masked, y_pred_masked))
     for idx, (row_y_test, row_y_pred) in tqdm(iterator, total=len(y_test_masked)):
-        labels_2_include = range(1, len(idx2vocab))
-        take_non_zeros = np.nonzero(row_y_test)
-        take_non_zeros_ = np.nonzero(row_y_pred)
-        last_word_test, last_word_pred = take_non_zeros[0].max() + 1, take_non_zeros_[0].max() + 1
-        row_y_pred_zeros, row_y_test_zeros = row_y_pred[take_non_zeros], row_y_test[take_non_zeros]
-        eval_results[idx] = {
+        take_non_zeros_test = np.nonzero(row_y_test)
+        take_non_zeros_pred = np.nonzero(row_y_pred)
+        last_word_test, last_word_pred = take_non_zeros_test[0].max() + 1, take_non_zeros_pred[0].max() + 1
+        row_y_pred_zeros, row_y_test_zeros = row_y_pred[take_non_zeros_test], row_y_test[take_non_zeros_test]
+        instance_result = {
+            "trace": idx,
             SEQUENCE_LENGTH: seq_lens[idx],
             "acc": accuracy_score(row_y_pred_zeros, row_y_test_zeros),
             "recall": recall_score(row_y_pred_zeros, row_y_test_zeros, average=mode, zero_division=0),
             "precision": precision_score(row_y_pred_zeros, row_y_test_zeros, average=mode, zero_division=0),
             "f1": f1_score(row_y_pred_zeros, row_y_test_zeros, average=mode, zero_division=0),
         }
-        eval_results[idx].update(compute_sequence_metrics(row_y_test[:last_word_test], row_y_pred[:last_word_pred]))
+        instance_result.update(compute_sequence_metrics(row_y_test[:last_word_test], row_y_pred[:last_word_pred]))
+        instance_result.update(compute_pred_seq(idx2vocab, row_y_pred, row_y_test, last_word_test, last_word_pred))
+        eval_results.append(instance_result)
 
-    results = pd.DataFrame(eval_results).T.sort_index()
+    results = pd.DataFrame(eval_results)
     print(STEP3)
     print(results)
     if save_path:
@@ -119,21 +121,25 @@ def show_predicted_seq(idx2vocab, test_dataset, model, save_path=None, mode=None
         take_non_zeros_test = np.nonzero(row_y_test)
         take_non_zeros_pred = np.nonzero(row_y_pred)
         last_word_test, last_word_pred = take_non_zeros_test[0].max() + 1, take_non_zeros_pred[0].max() + 1
-        eval_results.append({
-            "case": idx,
-            "true": " -> ".join([f"{i:02d}" for i in row_y_test[:last_word_test]]),
-            "pred": " -> ".join([f"{i:02d}" for i in row_y_pred[:last_word_pred]]),
-            "true_decoded": " -> ".join([idx2vocab[i] for i in row_y_test[:last_word_test]]),
-            "pred_decoded": " -> ".join([idx2vocab[i] for i in row_y_pred[:last_word_pred]]),
-            "true_w_padding": " -> ".join([f"{i:02d}" for i in row_y_test]),
-            "pred_w_padding": " -> ".join([f"{i:02d}" for i in row_y_pred]),
-        })
+        eval_results.append(compute_pred_seq(idx2vocab, row_y_pred, row_y_test, last_word_test, last_word_pred))
+        eval_results[-1]["case"] = idx
 
     results = pd.DataFrame(eval_results)
     print(results)
     if save_path:
         results.to_csv(save_path, index=None)
     return results
+
+
+def compute_pred_seq(idx2vocab, row_y_pred, row_y_test, last_word_test, last_word_pred):
+    return {
+        "true_encoded": " -> ".join([f"{i:03d}" for i in row_y_test[:last_word_test]]),
+        "pred_encoded": " -> ".join([f"{i:03d}" for i in row_y_pred[:last_word_pred]]),
+        "true_encoded_with_padding": " -> ".join([f"{i:03d}" for i in row_y_test]),
+        "pred_encoded_with_padding": " -> ".join([f"{i:03d}" for i in row_y_pred]),
+        "true_decoded": " -> ".join([idx2vocab[i] for i in row_y_test[:last_word_test]]),
+        "pred_decoded": " -> ".join([idx2vocab[i] for i in row_y_pred[:last_word_pred]]),
+    }
 
 
 def damerau_levenshtein_score(true_seq, pred_seq):
@@ -178,7 +184,7 @@ if __name__ == "__main__":
 
     # model.fit(train_dataset, batch_size=1000, epochs=1, validation_data=val_dataset)
 
-    # results_by_instance(data.idx2vocab, test_dataset, model, 'junk/test1_.csv')
+    results_by_instance(data.idx2vocab, test_dataset, model, 'junk/test1_.csv')
     # results_by_len(data.idx2vocab, test_dataset, model, 'junk/test2_.csv')
-    show_predicted_seq(data.idx2vocab, test_dataset, model, save_path='junk/test3_.csv', mode=None)
+    # show_predicted_seq(data.idx2vocab, test_dataset, model, save_path='junk/test3_.csv', mode=None)
     # show_predicted_seq(data.idx2vocab, test_dataset, model, save_path='junk/test4_.csv', mode=FULL)
