@@ -80,7 +80,7 @@ def results_by_instance(idx2vocab, test_dataset, model, save_path=None, mode='we
         labels_2_include = range(1, len(idx2vocab))
         take_non_zeros = np.nonzero(row_y_test)
         take_non_zeros_ = np.nonzero(row_y_pred)
-        last_word_test, last_word_pred = take_non_zeros[0].max()+1, take_non_zeros_[0].max()+1
+        last_word_test, last_word_pred = take_non_zeros[0].max() + 1, take_non_zeros_[0].max() + 1
         row_y_pred_zeros, row_y_test_zeros = row_y_pred[take_non_zeros], row_y_test[take_non_zeros]
         eval_results[idx] = {
             SEQUENCE_LENGTH: seq_lens[idx],
@@ -112,16 +112,21 @@ def show_predicted_seq(idx2vocab, test_dataset, model, save_path=None, mode=None
 
     print(STEP2)
     eval_results = []
-    seq_lens = non_zero_mask_test.sum(axis=-1)
-    if mode == FULL:
-        seq_lens = np.full(seq_lens.shape, None)
-    y_pred_masked = model.predict(X_test).argmax(axis=-1) * non_zero_mask_test
-    y_test_masked = y_test * non_zero_mask_test
+    y_pred_masked = model.predict(X_test).argmax(axis=-1)
+    y_test_masked = y_test
     iterator = enumerate(zip(y_pred_masked, y_test_masked))
     for idx, (row_y_pred, row_y_test) in tqdm(iterator, total=len(y_pred_masked)):
+        take_non_zeros_test = np.nonzero(row_y_test)
+        take_non_zeros_pred = np.nonzero(row_y_pred)
+        last_word_test, last_word_pred = take_non_zeros_test[0].max() + 1, take_non_zeros_pred[0].max() + 1
         eval_results.append({
-            "true": " -> ".join([idx2vocab[i] for i in row_y_test[:seq_lens[idx]]]),
-            "pred": " -> ".join([idx2vocab[i] for i in row_y_pred[:seq_lens[idx]]]),
+            "case": idx,
+            "true": " -> ".join([f"{i:02d}" for i in row_y_test[:last_word_test]]),
+            "pred": " -> ".join([f"{i:02d}" for i in row_y_pred[:last_word_pred]]),
+            "true_decoded": " -> ".join([idx2vocab[i] for i in row_y_test[:last_word_test]]),
+            "pred_decoded": " -> ".join([idx2vocab[i] for i in row_y_pred[:last_word_pred]]),
+            "true_w_padding": " -> ".join([f"{i:02d}" for i in row_y_test]),
+            "pred_w_padding": " -> ".join([f"{i:02d}" for i in row_y_pred]),
         })
 
     results = pd.DataFrame(eval_results)
@@ -140,22 +145,24 @@ def damerau_levenshtein_score(true_seq, pred_seq):
     all_distances = [textdistance.damerau_levenshtein.normalized_similarity(t_seq, p_seq) for t_seq, p_seq in zip(true_seq_symbols, pred_seq_symbols)]
     return np.mean(all_distances)
 
+
 def compute_sequence_metrics(true_seq, pred_seq):
 
     true_seq_symbols = "".join([symbol_mapping[idx] for idx in true_seq])
     pred_seq_symbols = "".join([symbol_mapping[idx] for idx in pred_seq])
     dict_instance_distances = {
-        "levenshtein":textdistance.levenshtein.normalized_similarity(true_seq_symbols, pred_seq_symbols),
-        "damerau_levenshtein":textdistance.damerau_levenshtein.normalized_similarity(true_seq_symbols, pred_seq_symbols),
-        "local_alignment":textdistance.smith_waterman.normalized_similarity(true_seq_symbols, pred_seq_symbols),
-        "global_alignment":textdistance.needleman_wunsch.normalized_similarity(true_seq_symbols, pred_seq_symbols),
-        "emph_start":textdistance.jaro_winkler.normalized_similarity(true_seq_symbols, pred_seq_symbols),
-        "longest_subsequence":textdistance.lcsseq.normalized_similarity(true_seq_symbols, pred_seq_symbols),
-        "longest_substring":textdistance.lcsstr.normalized_similarity(true_seq_symbols, pred_seq_symbols),
-        "overlap":textdistance.overlap.normalized_similarity(true_seq_symbols, pred_seq_symbols),
-        "entropy":textdistance.entropy_ncd.normalized_similarity(true_seq_symbols, pred_seq_symbols),
+        "levenshtein": textdistance.levenshtein.normalized_similarity(true_seq_symbols, pred_seq_symbols),
+        "damerau_levenshtein": textdistance.damerau_levenshtein.normalized_similarity(true_seq_symbols, pred_seq_symbols),
+        "local_alignment": textdistance.smith_waterman.normalized_similarity(true_seq_symbols, pred_seq_symbols),
+        "global_alignment": textdistance.needleman_wunsch.normalized_similarity(true_seq_symbols, pred_seq_symbols),
+        "emph_start": textdistance.jaro_winkler.normalized_similarity(true_seq_symbols, pred_seq_symbols),
+        "longest_subsequence": textdistance.lcsseq.normalized_similarity(true_seq_symbols, pred_seq_symbols),
+        "longest_substring": textdistance.lcsstr.normalized_similarity(true_seq_symbols, pred_seq_symbols),
+        "overlap": textdistance.overlap.normalized_similarity(true_seq_symbols, pred_seq_symbols),
+        "entropy": textdistance.entropy_ncd.normalized_similarity(true_seq_symbols, pred_seq_symbols),
     }
     return dict_instance_distances
+
 
 if __name__ == "__main__":
     data = BPIC12W(debug=False)
@@ -171,7 +178,7 @@ if __name__ == "__main__":
 
     # model.fit(train_dataset, batch_size=1000, epochs=1, validation_data=val_dataset)
 
-    results_by_instance(data.idx2vocab, test_dataset, model, 'junk/test1_.csv')
+    # results_by_instance(data.idx2vocab, test_dataset, model, 'junk/test1_.csv')
     # results_by_len(data.idx2vocab, test_dataset, model, 'junk/test2_.csv')
     show_predicted_seq(data.idx2vocab, test_dataset, model, save_path='junk/test3_.csv', mode=None)
-    show_predicted_seq(data.idx2vocab, test_dataset, model, save_path='junk/test4_.csv', mode=FULL)
+    # show_predicted_seq(data.idx2vocab, test_dataset, model, save_path='junk/test4_.csv', mode=FULL)
