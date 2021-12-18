@@ -10,9 +10,9 @@ physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 # https://keras.io/guides/functional_api/
-class ProcessLSTMSimpleModel(Model):
+class SimpleLSTMModel(Model):
     def __init__(self, vocab_len, max_len, embed_dim=10, ff_dim=20):
-        super(ProcessLSTMSimpleModel, self).__init__()
+        super(SimpleLSTMModel, self).__init__()
         # self.inputs = InputLayer(input_shape=(max_len,))
         self.embedding = Embedding(vocab_len, embed_dim, mask_zero=True)
         self.lstm_layer = Bidirectional(LSTM(ff_dim, return_sequences=True))
