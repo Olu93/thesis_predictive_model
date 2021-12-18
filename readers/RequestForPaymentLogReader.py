@@ -4,7 +4,7 @@ import tensorflow as tf
 
 class RequestForPaymentLogReader(AbstractProcessLogReader):
     def __init__(self, **kwargs) -> None:
-        super().__init__(log_path='data/RequestForPayment.xes_', csv_path='data/RequestForPayment.csv', **kwargs)
+        super().__init__(log_path='data/dataset_bpic2020_tu_travel/RequestForPayment.xes', csv_path='data/RequestForPayment.csv', **kwargs)
 
     def preprocess_level_general(self):
         super().preprocess_level_general(remove_cols=[

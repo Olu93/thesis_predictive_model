@@ -235,7 +235,7 @@ class AbstractProcessLogReader():
 
     @property
     def _distinct_trace_ratio(self):
-        return len(set(self._traces)) / self._log_size
+        return len(set(tuple(tr) for tr in self._traces.values())) / self._log_size
 
     @property
     def _min_seq_len(self):
@@ -249,18 +249,18 @@ class AbstractProcessLogReader():
     def _num_distinct_events(self):
         return len([ev for ev in self.vocab2idx.keys() if ev not in [self.padding_token]])
 
-    def get_example_log_subset(self, num_traces=10):
+    def get_example_trace_subset(self, num_traces=10):
         random_starting_point = random.randint(0, self._log_size - num_traces -1)
         df_traces = pd.DataFrame(self._traces.items()).set_index(0).sort_index()
         example = df_traces[random_starting_point:random_starting_point + num_traces]
-        return example
+        return [val for val in example.values]
 
 
 if __name__ == '__main__':
-    data = AbstractProcessLogReader(log_path='data/RequestForPayment.xes_', csv_path='data/RequestForPayment.csv', mode=TaskModes.SIMPLE).init_data()
+    data = AbstractProcessLogReader(log_path='data/dataset_bpic2020_tu_travel/RequestForPayment.xes', csv_path='data/RequestForPayment.csv', mode=TaskModes.SIMPLE).init_log(save=True).init_data()
     ds_counter = data.get_train_dataset()
 
     print(next(iter(ds_counter.take(10)))[0].shape)
     print(next(iter(ds_counter))[0].shape)
     print(data.get_data_statistics())
-    print(data.get_example_log_subset())
+    print(data.get_example_trace_subset())

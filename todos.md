@@ -12,12 +12,12 @@
 - [ ] Check the results
 - [ ] Investigate process discovery
 - [x] Implement mass int to string decoder
-- [ ] Implement dataset statistics 
-    * [ ] report log size
-    * [ ] percentage of distinct traces
-    * [ ] sequence lengths
-    * [ ] number of event 
-    * [ ] show example of the original trace
+- [x] Implement dataset statistics 
+    * [x] report log size
+    * [x] percentage of distinct traces
+    * [x] sequence lengths
+    * [x] number of event 
+    * [x] show example of the original trace
 - [ ] Implement model versions with additional data
 - [ ] Add start and end token to sequence
 - [ ] Collect additional datasets
