@@ -147,11 +147,12 @@ def compute_sequence_metrics(true_seq, pred_seq):
     dict_instance_distances = {
         "levenshtein":textdistance.levenshtein.normalized_similarity(true_seq_symbols, pred_seq_symbols),
         "damerau_levenshtein":textdistance.damerau_levenshtein.normalized_similarity(true_seq_symbols, pred_seq_symbols),
-        "global_alignment":textdistance.smith_waterman.normalized_similarity(true_seq_symbols, pred_seq_symbols),
-        "local_alignment":textdistance.needleman_wunsch.normalized_similarity(true_seq_symbols, pred_seq_symbols),
+        "local_alignment":textdistance.smith_waterman.normalized_similarity(true_seq_symbols, pred_seq_symbols),
+        "global_alignment":textdistance.needleman_wunsch.normalized_similarity(true_seq_symbols, pred_seq_symbols),
         "emph_start":textdistance.jaro_winkler.normalized_similarity(true_seq_symbols, pred_seq_symbols),
         "longest_subsequence":textdistance.lcsseq.normalized_similarity(true_seq_symbols, pred_seq_symbols),
         "longest_substring":textdistance.lcsstr.normalized_similarity(true_seq_symbols, pred_seq_symbols),
+        "overlap":textdistance.overlap.normalized_similarity(true_seq_symbols, pred_seq_symbols),
         "entropy":textdistance.entropy_ncd.normalized_similarity(true_seq_symbols, pred_seq_symbols),
     }
     return dict_instance_distances
