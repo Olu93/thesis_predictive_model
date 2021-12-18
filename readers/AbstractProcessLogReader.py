@@ -151,7 +151,7 @@ class AbstractProcessLogReader():
             self.traces = [tr[:random.randint(2, len(tr))] for tr in tqdm(tmp_traces, desc="random-samples") if len(tr) > 1]
 
         if self.mode == TaskModes.FINAL_OUTCOME:
-            self.traces = ([tr[0:-1], tr[-1] * (len(tr) - 1)] for tr in loader if len(tr) > 1)
+            self.traces = ([tr[0:], tr[-2] * (len(tr) - 1)] for tr in loader if len(tr) > 1)
 
         self.traces, self.targets = zip(*[tr_couple for tr_couple in tqdm(self.traces)])
         self.padded_traces = pad_sequences(self.traces, self.max_len, padding='post')

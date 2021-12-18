@@ -36,6 +36,12 @@
       "module": "runner.Run"
     },
     {
+      "name": "Test",
+      "type": "python",
+      "request": "launch",
+      "module": "runner.Run_Small"
+    },
+    {
       "name": "Python: Aktuelle Datei",
       "type": "python",
       "request": "launch",

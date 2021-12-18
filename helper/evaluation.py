@@ -38,8 +38,10 @@ def results_by_instance(idx2vocab, start_id, end_id, test_dataset, model, save_p
     y_pred_masked = model.predict(X_test).argmax(axis=-1)
     iterator = enumerate(zip(X_test, y_test, y_pred_masked))
     for idx, (row_X_test, row_y_test, row_y_pred) in tqdm(iterator, total=len(y_test)):
-        last_word_test = np.argmax(row_y_test==end_id)+1
-        last_word_pred = np.argmax(row_y_pred==end_id)+1
+        last_word_test = np.argmax(row_y_test == end_id)
+        last_word_pred = np.argmax(row_y_pred == end_id)
+        last_word_test = last_word_test + 1 if last_word_test != 0 else len(row_y_test) + 1
+        last_word_pred = last_word_pred + 1 if last_word_pred != 0 else len(row_y_pred) + 1
         longer_sequence_stop = max([last_word_test, last_word_pred])
         # last_word_test, last_word_pred = take_non_zeros_test[0].max() + 1, take_non_zeros_pred[0].max() + 1
         row_y_test_zeros, row_y_pred_zeros = row_y_test[:longer_sequence_stop], row_y_pred[:longer_sequence_stop]
@@ -92,7 +94,7 @@ def compute_pred_seq(idx2vocab, row_y_pred, row_y_test, row_x_test, last_word_te
     if len(row_x_test[:last_word_test]) <= 1:
         print("Check")
     return {
-        "input": " | ".join(["-".join(x_convert[:lim+1]) for lim in range(len(x_convert))]),
+        "input": " | ".join(["-".join(x_convert[:lim + 1]) for lim in range(len(x_convert))]),
         "true_encoded": " -> ".join([f"{i:03d}" for i in row_y_test[:last_word_test]]),
         "pred_encoded": " -> ".join([f"{i:03d}" for i in row_y_pred[:last_word_pred]]),
         "true_encoded_with_padding": " -> ".join([f"{i:03d}" for i in row_y_test]),
@@ -182,12 +184,14 @@ def damerau_levenshtein_score(true_seq, pred_seq):
 
 if __name__ == "__main__":
     data = BPIC12W(debug=False)
+    data = data.init_log(True)
     data = data.init_data()
     train_dataset = data.get_train_dataset().take(1000)
-    val_dataset = data.get_val_dataset()
+    val_dataset = data.get_val_dataset().take(100)
     test_dataset = data.get_test_dataset()
 
     model = SimpleLSTMModel(data.vocab_len, data.max_len)
+    # model = TransformerModel(data.vocab_len, data.max_len)
     model.build((None, data.max_len))
     model.compile(loss='categorical_crossentropy', optimizer=Adam(0.001), metrics=[CategoricalAccuracy()])
     model.summary()

@@ -10,8 +10,8 @@ from helper.constants import NUMBER_OF_INSTANCES, SEQUENCE_LENGTH
 METRIC = "damerau_levenshtein"
 # %%
 fig, ax = plt.subplots(1, 1, figsize=(10, 7))
-transformer_results = pd.read_csv('results/Transformer_by_instance.csv').set_index("trace")
-lstm_results = pd.read_csv('results/LSTM_by_instance.csv').set_index("trace")
+transformer_results = pd.read_csv('junk/Transformer_by_instance.csv').set_index("trace")
+lstm_results = pd.read_csv('junk/LSTM_by_instance.csv').set_index("trace")
 
 t_res = transformer_results.groupby("true_seq_len").agg(["mean", "std", "median"])[METRIC]
 l_res = lstm_results.groupby("true_seq_len").agg(["mean", "std", "median"])[METRIC]
@@ -39,14 +39,3 @@ ax.set_xlabel(SEQUENCE_LENGTH)
 plt.show()
 # %%
 
-# %%
-fig, ax = plt.subplots(1, 1, figsize=(10, 7))
-transformer_results = transformer_results.sort_values(NUMBER_OF_INSTANCES)
-lstm_results = pd.read_csv('results_LSTM_by_instance.csv').set_index(SEQUENCE_LENGTH).sort_index()[METRIC]
-ax.plot(lstm_results.index, lstm_results, label="LSTM")
-ax.plot(transformer_results.index, transformer_results, label="Transformer")
-ax.legend()
-ax.set_title(f'{METRIC} over {SEQUENCE_LENGTH}')
-ax.set_ylabel(METRIC)
-ax.set_xlabel(SEQUENCE_LENGTH)
-plt.show()
