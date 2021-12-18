@@ -13,9 +13,27 @@
 - [ ] Investigate process discovery
 - [x] Implement mass int to string decoder
 - [ ] Implement dataset statistics 
-    * report log size, percentage of distinct traces, 
-    * sequence lengths
-    * number of event 
-    * show example of the original trace
+    * [ ] report log size
+    * [ ] percentage of distinct traces
+    * [ ] sequence lengths
+    * [ ] number of event 
+    * [ ] show example of the original trace
+- [ ] Implement model versions with additional data
+- [ ] Add start and end token to sequence
+- [ ] Collect additional datasets
+    * [ ] Sepsis
+    * [x] BPIC 2011
+    * [x] BPIC 2012 
+    * [x] BPIC 2013
+    * [x] BPIC 2013
+    * [x] BPIC 2014
+    * [x] BPIC 2015
+    * [x] BPIC 2016
+    * [x] BPIC 2017
+    * [x] BPIC 2018
+    * [ ] BPIC 2019
+    * [x] BPIC 2020
+ [ ] Implement dataset readers
+
 
 

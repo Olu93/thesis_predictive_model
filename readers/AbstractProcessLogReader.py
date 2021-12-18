@@ -122,9 +122,11 @@ class AbstractProcessLogReader():
     def compute_sequences(self):
         grouped_traces = list(self.data.groupby(by=self.caseId))
 
-        self._traces = {idx: list(df[self.activityId].values) for idx, df in grouped_traces}
+        self._traces = {idx: tuple(df[self.activityId].values) for idx, df in grouped_traces}
+
         self.length_distribution = Counter([len(tr) for tr in self._traces.values()])
         self.max_len = max(list(self.length_distribution.keys()))
+        self.min_len = min(list(self.length_distribution.keys()))
         self.instantiate_dataset()
 
     def instantiate_dataset(self):
@@ -218,16 +220,40 @@ class AbstractProcessLogReader():
     def idx2vocab(self) -> List[str]:
         return self._vocab_r
 
-    # def __getitem__(self, idx):
-    #     if torch.is_tensor(idx):
-    #         idx = idx.tolist()
-    #     X, y = [self.vocab2idx[wrd] for wrd in self.train_traces[idx][:-1]], [self.vocab2idx[self.train_traces[idx][-1]]]
-    #     sample = {'sequence': X, 'target': y}
+    def get_data_statistics(self):
+        return {
+            "log_size": self._log_size,
+            "min_seq_len": self._min_seq_len,
+            "max_seq_len": self._max_seq_len,
+            "distinct_trace_ratio": self._distinct_trace_ratio,
+            "num_distinct_events": self._num_distinct_events,
+        }
 
-    #     if self.transform:
-    #         sample = self.transform(sample)
+    @property
+    def _log_size(self):
+        return len(self._traces)
 
-    #     return sample
+    @property
+    def _distinct_trace_ratio(self):
+        return len(set(self._traces)) / self._log_size
+
+    @property
+    def _min_seq_len(self):
+        return self.min_len
+
+    @property
+    def _max_seq_len(self):
+        return self.max_len
+
+    @property
+    def _num_distinct_events(self):
+        return len([ev for ev in self.vocab2idx.keys() if ev not in [self.padding_token]])
+
+    def get_example_log_subset(self, num_traces=10):
+        random_starting_point = random.randint(0, self._log_size - num_traces -1)
+        df_traces = pd.DataFrame(self._traces.items()).set_index(0).sort_index()
+        example = df_traces[random_starting_point:random_starting_point + num_traces]
+        return example
 
 
 if __name__ == '__main__':
@@ -236,3 +262,5 @@ if __name__ == '__main__':
 
     print(next(iter(ds_counter.take(10)))[0].shape)
     print(next(iter(ds_counter))[0].shape)
+    print(data.get_data_statistics())
+    print(data.get_example_log_subset())
