@@ -25,15 +25,17 @@ if __name__ == "__main__":
     adam_init = 0.001
 
     print("LSTM:")
-    lstm_model = TransformerModel(data.vocab_len, data.max_len)
+    lstm_model = SimpleLSTMModel(data.vocab_len, data.max_len)
     lstm_model.build((None, data.max_len))
     lstm_model.compile(loss='categorical_crossentropy', optimizer=Adam(adam_init), metrics=['accuracy'])
     lstm_model.summary()
+    start_id = data.start_id
+    end_id = data.end_id
     lstm_model.fit(train_dataset, batch_size=batch_size, epochs=epochs, validation_data=val_dataset)
-    results_by_instance(data.idx2vocab, test_dataset, lstm_model, 'results/LSTM_by_instance.csv')
+    results_by_instance(data.idx2vocab, start_id, end_id, test_dataset, lstm_model, 'results/LSTM_by_instance.csv')
     # results_by_len(data.idx2vocab, test_dataset, lstm_model, 'results/LSTM_by_len.csv')
-    show_predicted_seq(data.idx2vocab, test_dataset, lstm_model, save_path='results/LSTM_decoded_sequences_None.csv', mode=None)
-    show_predicted_seq(data.idx2vocab, test_dataset, lstm_model, save_path='results/LSTM_decoded_sequences_FULL.csv', mode=FULL)
+    # show_predicted_seq(data.idx2vocab, test_dataset, lstm_model, save_path='results/LSTM_decoded_sequences_None.csv', mode=None)
+    # show_predicted_seq(data.idx2vocab, test_dataset, lstm_model, save_path='results/LSTM_decoded_sequences_FULL.csv', mode=FULL)
 
     print("Transformer:")
     transformer_model = TransformerModel(data.vocab_len, data.max_len)
@@ -41,7 +43,7 @@ if __name__ == "__main__":
     transformer_model.compile(loss='categorical_crossentropy', optimizer=Adam(adam_init), metrics=['accuracy'])
     transformer_model.summary()
     transformer_model.fit(train_dataset, batch_size=batch_size, epochs=epochs, validation_data=val_dataset)
-    results_by_instance(data.idx2vocab, test_dataset, transformer_model, 'results/Transformer_by_instance.csv')
+    results_by_instance(data.idx2vocab, start_id, end_id, test_dataset, transformer_model, 'results/Transformer_by_instance.csv')
     # results_by_len(data.idx2vocab, test_dataset, transformer_model, 'results/Transformer_by_len.csv')
-    show_predicted_seq(data.idx2vocab, test_dataset, transformer_model, save_path='results/Transformer_decoded_sequences_None.csv', mode=None)
-    show_predicted_seq(data.idx2vocab, test_dataset, transformer_model, save_path='results/Transformer_decoded_sequences_FULL.csv', mode=FULL)
+    # show_predicted_seq(data.idx2vocab, test_dataset, transformer_model, save_path='results/Transformer_decoded_sequences_None.csv', mode=None)
+    # show_predicted_seq(data.idx2vocab, test_dataset, transformer_model, save_path='results/Transformer_decoded_sequences_FULL.csv', mode=FULL)

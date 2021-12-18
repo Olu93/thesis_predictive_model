@@ -47,7 +47,9 @@ class AbstractProcessLogReader():
     activityId: str = None
     _vocab: dict = None
     mode: TaskModes = TaskModes.SIMPLE
-    padding_token: str = "<PAD>"
+    padding_token: str = "<P>"
+    end_token: str = "<E>"
+    start_token: str = "<S>"
     transform = None
 
     def __init__(self,
@@ -116,7 +118,9 @@ class AbstractProcessLogReader():
 
         self._vocab = {word: idx for idx, word in enumerate(all_unique_tokens, 1)}
         self._vocab[self.padding_token] = 0
-        self.vocab_len = len(self._vocab)
+        self._vocab[self.start_token] = len(self._vocab) + 1
+        self._vocab[self.end_token] = len(self._vocab) + 1
+        self.vocab_len = len(self._vocab) + 1
         self._vocab_r = {idx: word for word, idx in self._vocab.items()}
 
     def compute_sequences(self):
@@ -125,16 +129,19 @@ class AbstractProcessLogReader():
         self._traces = {idx: tuple(df[self.activityId].values) for idx, df in grouped_traces}
 
         self.length_distribution = Counter([len(tr) for tr in self._traces.values()])
-        self.max_len = max(list(self.length_distribution.keys()))
-        self.min_len = min(list(self.length_distribution.keys()))
+        self.max_len = max(list(self.length_distribution.keys())) + 2
+        self.min_len = min(list(self.length_distribution.keys())) + 2
         self.instantiate_dataset()
 
     def instantiate_dataset(self):
         print("Preprocess data")
         loader = tqdm(self._traces.values(), total=len(self._traces))
-        loader = ([self.vocab2idx[word] for word in tr] for tr in loader)
+        start_id = [self.vocab2idx[self.start_token]]
+        end_id = [self.vocab2idx[self.end_token]]
+
+        loader = (start_id + [self.vocab2idx[word] for word in tr] + end_id for tr in loader)
         if self.mode == TaskModes.SIMPLE:
-            self.traces = ([tr[0:-1], tr[1:]] for tr in loader if len(tr) > 1)
+            self.traces = ([tr[0:], tr[1:]] for tr in loader if len(tr) > 1)
 
         if self.mode == TaskModes.EXTENSIVE:
             self.traces = ([tr[0:end - 1], tr[1:end]] for tr in loader for end in range(2, len(tr) + 1) if len(tr) > 1)
@@ -211,6 +218,14 @@ class AbstractProcessLogReader():
     @property
     def tokens(self) -> List[str]:
         return list(self._vocab.keys())
+    
+    @property
+    def start_id(self) -> List[str]:
+        return self.vocab2idx[self.start_token]
+    
+    @property
+    def end_id(self) -> List[str]:
+        return self.vocab2idx[self.end_token]
 
     @property
     def vocab2idx(self) -> List[str]:
@@ -239,25 +254,26 @@ class AbstractProcessLogReader():
 
     @property
     def _min_seq_len(self):
-        return self.min_len
+        return self.min_len - 2
 
     @property
     def _max_seq_len(self):
-        return self.max_len
+        return self.max_len - 2
 
     @property
     def _num_distinct_events(self):
         return len([ev for ev in self.vocab2idx.keys() if ev not in [self.padding_token]])
 
     def get_example_trace_subset(self, num_traces=10):
-        random_starting_point = random.randint(0, self._log_size - num_traces -1)
+        random_starting_point = random.randint(0, self._log_size - num_traces - 1)
         df_traces = pd.DataFrame(self._traces.items()).set_index(0).sort_index()
         example = df_traces[random_starting_point:random_starting_point + num_traces]
         return [val for val in example.values]
 
 
 if __name__ == '__main__':
-    data = AbstractProcessLogReader(log_path='data/dataset_bpic2020_tu_travel/RequestForPayment.xes', csv_path='data/RequestForPayment.csv', mode=TaskModes.SIMPLE).init_log(save=True).init_data()
+    data = AbstractProcessLogReader(log_path='data/dataset_bpic2020_tu_travel/RequestForPayment.xes', csv_path='data/RequestForPayment.csv',
+                                    mode=TaskModes.SIMPLE).init_log(save=True).init_data()
     ds_counter = data.get_train_dataset()
 
     print(next(iter(ds_counter.take(10)))[0].shape)
