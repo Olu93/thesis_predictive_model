@@ -106,17 +106,17 @@ def show_predicted_seq(idx2vocab, test_dataset, model, save_path=None, mode=None
         test_set_list.append(instance)
     X_test, y_test = zip(*test_set_list)
     X_test, y_test = np.vstack(X_test), np.vstack(y_test).argmax(axis=-1)
-    non_zero_indices = np.nonzero(y_test)
-    non_zero_mask = np.zeros_like(X_test)
-    non_zero_mask[non_zero_indices] = 1
+    non_zero_indices_test = np.nonzero(y_test)
+    non_zero_mask_test = np.zeros_like(y_test)
+    non_zero_mask_test[non_zero_indices_test] = 1
 
     print(STEP2)
     eval_results = []
-    seq_lens = non_zero_mask.sum(axis=-1)
+    seq_lens = non_zero_mask_test.sum(axis=-1)
     if mode == FULL:
         seq_lens = np.full(seq_lens.shape, None)
-    y_pred_masked = model.predict(X_test).argmax(axis=-1) * non_zero_mask
-    y_test_masked = y_test * non_zero_mask
+    y_pred_masked = model.predict(X_test).argmax(axis=-1) * non_zero_mask_test
+    y_test_masked = y_test * non_zero_mask_test
     iterator = enumerate(zip(y_pred_masked, y_test_masked))
     for idx, (row_y_pred, row_y_test) in tqdm(iterator, total=len(y_pred_masked)):
         eval_results.append({
@@ -172,6 +172,6 @@ if __name__ == "__main__":
     # model.fit(train_dataset, batch_size=1000, epochs=1, validation_data=val_dataset)
 
     results_by_instance(data.idx2vocab, test_dataset, model, 'junk/test1_.csv')
-    results_by_len(data.idx2vocab, test_dataset, model, 'junk/test2_.csv')
+    # results_by_len(data.idx2vocab, test_dataset, model, 'junk/test2_.csv')
     show_predicted_seq(data.idx2vocab, test_dataset, model, save_path='junk/test3_.csv', mode=None)
     show_predicted_seq(data.idx2vocab, test_dataset, model, save_path='junk/test4_.csv', mode=FULL)
