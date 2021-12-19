@@ -12,15 +12,17 @@ from pm4py.util import constants
 from pm4py.visualization.dfg import visualizer as dfg_visualization
 from pm4py.visualization.graphs import visualizer as graphs_visualizer
 from pm4py.visualization.petrinet import visualizer as petrinet_visualization
+from pm4py.objects.log.util import dataframe_utils
+from pm4py.objects.conversion.log import converter as log_converter
 from tensorflow.python.keras.utils.np_utils import to_categorical
 from tqdm import tqdm
-import tensorflow_datasets as tfds
 import io
 import numpy as np
-from keras.preprocessing.sequence import pad_sequences
-from sklearn.model_selection import train_test_split
 import tensorflow as tf
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from sklearn.model_selection import train_test_split
 
+TO_EVENT_LOG = log_converter.Variants.TO_EVENT_LOG
 
 class TaskModes(Enum):
     SIMPLE = auto()
@@ -83,15 +85,18 @@ class AbstractProcessLogReader():
 
     def init_data(self):
         self._original_data = self._original_data if self._original_data is not None else pd.read_csv(self.csv_path)
+        self._original_data = dataframe_utils.convert_timestamp_columns_in_df(self._original_data)
         if self.debug:
             display(self._original_data.head())
+        parameters = {TO_EVENT_LOG.value.Parameters.CASE_ID_KEY: self.caseId}
+        self.log = self.log if self.log is not None else log_converter.apply(self._original_data, parameters=parameters, variant=TO_EVENT_LOG)
         self.preprocess_level_general()
         self.preprocess_level_specialized()
         self.register_vocabulary()
         self.compute_sequences()
         return self
 
-    def show_dfg(self):
+    def viz_dfg(self):
         dfg = dfg_discovery.apply(self.log)
         gviz = dfg_visualization.apply(dfg, log=self.log, variant=dfg_visualization.Variants.FREQUENCY)
         dfg_visualization.view(gviz)
@@ -218,11 +223,11 @@ class AbstractProcessLogReader():
     @property
     def tokens(self) -> List[str]:
         return list(self._vocab.keys())
-    
+
     @property
     def start_id(self) -> List[str]:
         return self.vocab2idx[self.start_token]
-    
+
     @property
     def end_id(self) -> List[str]:
         return self.vocab2idx[self.end_token]
@@ -273,10 +278,11 @@ class AbstractProcessLogReader():
 
 if __name__ == '__main__':
     data = AbstractProcessLogReader(log_path='data/dataset_bpic2020_tu_travel/RequestForPayment.xes', csv_path='data/RequestForPayment.csv',
-                                    mode=TaskModes.SIMPLE).init_log(save=True).init_data()
+                                    mode=TaskModes.SIMPLE).init_log(save=0).init_data()
     ds_counter = data.get_train_dataset()
 
     print(next(iter(ds_counter.take(10)))[0].shape)
     print(next(iter(ds_counter))[0].shape)
     print(data.get_data_statistics())
     print(data.get_example_trace_subset())
+    data.viz_dfg()

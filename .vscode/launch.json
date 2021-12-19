@@ -9,7 +9,9 @@
       "name": "Load AbstractProcessLogReader",
       "type": "python",
       "request": "launch",
-      "module": "readers.AbstractProcessLogReader"
+      "module": "readers.AbstractProcessLogReader",
+      "console": "externalTerminal"
+
     },
     {
       "name": "Test Helper",
