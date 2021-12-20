@@ -3,6 +3,7 @@ import random
 from enum import Enum, auto
 from typing import Counter, Dict, Iterable, Iterator, List, Union
 import pathlib
+from matplotlib import pyplot as plt
 import pandas as pd
 import pm4py
 from IPython.display import display
@@ -21,6 +22,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
+from pm4py.visualization.bpmn import visualizer as bpmn_visualizer
+from pm4py.visualization.heuristics_net import visualizer as hn_visualizer
 
 TO_EVENT_LOG = log_converter.Variants.TO_EVENT_LOG
 
@@ -96,10 +99,30 @@ class AbstractProcessLogReader():
         self.compute_sequences()
         return self
 
-    def viz_dfg(self):
+    def viz_dfg(self, bg_color="transparent"):
         dfg = dfg_discovery.apply(self.log)
         gviz = dfg_visualization.apply(dfg, log=self.log, variant=dfg_visualization.Variants.FREQUENCY)
-        dfg_visualization.view(gviz)
+        gviz.graph_attr["bgcolor"] = bg_color
+        return dfg_visualization.view(gviz)
+    
+    def viz_bpmn(self, bg_color="transparent"):
+        process_tree = pm4py.discover_tree_inductive(self.log)
+        bpmn_model = pm4py.convert_to_bpmn(process_tree)
+        parameters = bpmn_visualizer.Variants.CLASSIC.value.Parameters
+        gviz = bpmn_visualizer.apply(bpmn_model, parameters={parameters.FORMAT: 'png'})
+        gviz.graph_attr["bgcolor"] = bg_color
+        return bpmn_visualizer.view(gviz)
+
+    def viz_simple_process_map(self):
+        dfg, start_activities, end_activities = pm4py.discover_dfg(self.log)
+        return pm4py.view_dfg(dfg, start_activities, end_activities)
+    
+    def viz_process_map(self, bg_color="transparent"):
+        mapping = pm4py.discover_heuristics_net(self.log)
+        parameters = hn_visualizer.Variants.PYDOTPLUS.value.Parameters
+        gviz = hn_visualizer.apply(mapping, parameters={parameters.FORMAT: 'png'})              
+        # gviz.graph_attr["bgcolor"] = bg_color
+        return hn_visualizer.view(gviz)
 
     @property
     def original_data(self):
@@ -278,11 +301,16 @@ class AbstractProcessLogReader():
 
 if __name__ == '__main__':
     data = AbstractProcessLogReader(log_path='data/dataset_bpic2020_tu_travel/RequestForPayment.xes', csv_path='data/RequestForPayment.csv',
-                                    mode=TaskModes.SIMPLE).init_log(save=0).init_data()
+                                    mode=TaskModes.SIMPLE)
+    # data = data.init_log(save=0)
+    data = data.init_data()
     ds_counter = data.get_train_dataset()
 
     print(next(iter(ds_counter.take(10)))[0].shape)
     print(next(iter(ds_counter))[0].shape)
     print(data.get_data_statistics())
     print(data.get_example_trace_subset())
-    data.viz_dfg()
+    data.viz_dfg("white")
+    data.viz_bpmn("white")
+    data.viz_process_map("white")
+    
