@@ -10,8 +10,6 @@
       "type": "python",
       "request": "launch",
       "module": "readers.AbstractProcessLogReader",
-      "console": "externalTerminal"
-
     },
     {
       "name": "Test Helper",
