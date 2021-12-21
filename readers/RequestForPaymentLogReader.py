@@ -15,7 +15,7 @@ class RequestForPaymentLogReader(AbstractProcessLogReader):
         ])
 
     def preprocess_level_specialized(self, **kwargs):
-        self.data[self.activityId] = self.data[self.activityId].replace(
+        self.data[self.col_activity_id] = self.data[self.col_activity_id].replace(
             'Request For Payment ',
             '',
             regex=True,
@@ -24,7 +24,7 @@ class RequestForPaymentLogReader(AbstractProcessLogReader):
             '_',
             regex=True,
         )
-        self.data[self.caseId] = self.data[self.caseId].replace(
+        self.data[self.col_case_id] = self.data[self.col_case_id].replace(
             'request for ',
             '',
             regex=True,

@@ -24,7 +24,7 @@ class BPIC12W(AbstractProcessLogReader):
 
     def preprocess_level_specialized(self, **kwargs):
         self.data = self.data[self.data['lifecycle:transition']=='COMPLETE']
-        self.data = self.data[self.data[self.activityId].str.startswith(self.subset, na=False)]
+        self.data = self.data[self.data[self.col_activity_id].str.startswith(self.subset, na=False)]
     
     
 if __name__ == '__main__':

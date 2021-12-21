@@ -12,6 +12,12 @@
       "module": "readers.AbstractProcessLogReader",
     },
     {
+      "name": "Load Reader",
+      "type": "python",
+      "request": "launch",
+      "module": "readers.${fileBasenameNoExtension}",
+    },
+    {
       "name": "Test Helper",
       "type": "python",
       "request": "launch",

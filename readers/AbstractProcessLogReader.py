@@ -27,6 +27,7 @@ from pm4py.visualization.heuristics_net import visualizer as hn_visualizer
 
 TO_EVENT_LOG = log_converter.Variants.TO_EVENT_LOG
 
+
 class TaskModes(Enum):
     SIMPLE = auto()
     EXTENSIVE = auto()
@@ -48,8 +49,8 @@ class AbstractProcessLogReader():
     _original_data: pd.DataFrame = None
     data: pd.DataFrame = None
     debug: bool = False
-    caseId: str = None
-    activityId: str = None
+    col_case_id: str = None
+    col_activity_id: str = None
     _vocab: dict = None
     mode: TaskModes = TaskModes.SIMPLE
     padding_token: str = "<P>"
@@ -60,8 +61,9 @@ class AbstractProcessLogReader():
     def __init__(self,
                  log_path: str,
                  csv_path: str,
-                 caseId: str = 'case:concept:name',
-                 activityId: str = 'concept:name',
+                 col_case_id: str = 'case:concept:name',
+                 col_event_id: str = 'concept:name',
+                 col_timestamp: str = 'timestamp',
                  debug=False,
                  mode: TaskModes = TaskModes.SIMPLE,
                  max_tokens: int = None,
@@ -72,8 +74,9 @@ class AbstractProcessLogReader():
         self.mode = mode
         self.log_path = pathlib.Path(log_path)
         self.csv_path = pathlib.Path(csv_path)
-        self.caseId = caseId
-        self.activityId = activityId
+        self.col_case_id = col_case_id
+        self.col_activity_id = col_event_id
+        self.col_timestamp = col_timestamp
 
     def init_log(self, save=False):
         self.log = pm4py.read_xes(self.log_path.as_posix())
@@ -91,7 +94,7 @@ class AbstractProcessLogReader():
         self._original_data = dataframe_utils.convert_timestamp_columns_in_df(self._original_data)
         if self.debug:
             display(self._original_data.head())
-        parameters = {TO_EVENT_LOG.value.Parameters.CASE_ID_KEY: self.caseId}
+        parameters = {TO_EVENT_LOG.value.Parameters.CASE_ID_KEY: self.col_case_id}
         self.log = self.log if self.log is not None else log_converter.apply(self._original_data, parameters=parameters, variant=TO_EVENT_LOG)
         self.preprocess_level_general()
         self.preprocess_level_specialized()
@@ -104,7 +107,7 @@ class AbstractProcessLogReader():
         gviz = dfg_visualization.apply(dfg, log=self.log, variant=dfg_visualization.Variants.FREQUENCY)
         gviz.graph_attr["bgcolor"] = bg_color
         return dfg_visualization.view(gviz)
-    
+
     def viz_bpmn(self, bg_color="transparent"):
         process_tree = pm4py.discover_tree_inductive(self.log)
         bpmn_model = pm4py.convert_to_bpmn(process_tree)
@@ -116,11 +119,11 @@ class AbstractProcessLogReader():
     def viz_simple_process_map(self):
         dfg, start_activities, end_activities = pm4py.discover_dfg(self.log)
         return pm4py.view_dfg(dfg, start_activities, end_activities)
-    
+
     def viz_process_map(self, bg_color="transparent"):
         mapping = pm4py.discover_heuristics_net(self.log)
         parameters = hn_visualizer.Variants.PYDOTPLUS.value.Parameters
-        gviz = hn_visualizer.apply(mapping, parameters={parameters.FORMAT: 'png'})              
+        gviz = hn_visualizer.apply(mapping, parameters={parameters.FORMAT: 'png'})
         # gviz.graph_attr["bgcolor"] = bg_color
         return hn_visualizer.view(gviz)
 
@@ -135,14 +138,17 @@ class AbstractProcessLogReader():
     def preprocess_level_general(self, **kwargs):
         self.data = self.original_data
         remove_cols = kwargs.get('remove_cols')
+        thresh = len(self.data) * 0.25
+        cols_to_remove = list({key: val for key, val in self.original_data.isna().sum().to_dict().items() if val > thresh}.keys())
         if remove_cols:
-            self.data = self.original_data.drop(remove_cols, axis=1)
+            self.data = self.data.drop(remove_cols, axis=1)
+        self.data = self.data.drop(cols_to_remove, axis=1)
 
     def preprocess_level_specialized(self, **kwargs):
         self.data = self.data
 
     def register_vocabulary(self):
-        all_unique_tokens = list(self.data[self.activityId].unique())
+        all_unique_tokens = list(self.data[self.col_activity_id].unique())
 
         self._vocab = {word: idx for idx, word in enumerate(all_unique_tokens, 1)}
         self._vocab[self.padding_token] = 0
@@ -152,9 +158,9 @@ class AbstractProcessLogReader():
         self._vocab_r = {idx: word for word, idx in self._vocab.items()}
 
     def compute_sequences(self):
-        grouped_traces = list(self.data.groupby(by=self.caseId))
+        grouped_traces = list(self.data.groupby(by=self.col_case_id))
 
-        self._traces = {idx: tuple(df[self.activityId].values) for idx, df in grouped_traces}
+        self._traces = {idx: tuple(df[self.col_activity_id].values) for idx, df in grouped_traces}
 
         self.length_distribution = Counter([len(tr) for tr in self._traces.values()])
         self.max_len = max(list(self.length_distribution.keys())) + 2
@@ -299,9 +305,42 @@ class AbstractProcessLogReader():
         return [val for val in example.values]
 
 
+class CSVLogReader(AbstractProcessLogReader):
+    def __init__(self, log_path: str, csv_path: str, sep=",", **kwargs) -> None:
+        super().__init__(log_path, csv_path, **kwargs)
+        self._original_data = pd.read_csv(self.log_path, sep=sep)
+
+    def init_log(self, save=False):
+        col_mappings = {
+            self.col_timestamp: "time:timestamp",
+            self.col_activity_id: "concept:name",
+            self.col_case_id: "case:concept:name",
+        }
+
+        self._original_data = self._original_data.rename(columns=col_mappings)
+        self.col_timestamp = "time:timestamp"
+        self.col_activity_id = "concept:name"
+        self.col_case_id = "case:concept:name"
+
+        self._original_data = dataframe_utils.convert_timestamp_columns_in_df(
+            self._original_data,
+            timest_columns=[self.col_timestamp],
+        )
+        parameters = {
+            TO_EVENT_LOG.value.Parameters.CASE_ID_KEY: self.col_case_id,
+            # TO_EVENT_LOG.value.Parameters.: self.caseId,
+        }
+        self.log = self.log if self.log is not None else log_converter.apply(self.original_data, parameters=parameters, variant=TO_EVENT_LOG)
+        if self.debug:
+            print(self.log[1][0])  #prints the first event of the first trace of the given log
+        self._original_data = pm4py.convert_to_dataframe(self.log)
+        if save:
+            self._original_data.to_csv(self.csv_path, index=False)
+        return self
+
+
 if __name__ == '__main__':
-    data = AbstractProcessLogReader(log_path='data/dataset_bpic2020_tu_travel/RequestForPayment.xes', csv_path='data/RequestForPayment.csv',
-                                    mode=TaskModes.SIMPLE)
+    data = AbstractProcessLogReader(log_path='data/dataset_bpic2020_tu_travel/RequestForPayment.xes', csv_path='data/RequestForPayment.csv', mode=TaskModes.SIMPLE)
     # data = data.init_log(save=0)
     data = data.init_data()
     ds_counter = data.get_train_dataset()
@@ -313,4 +352,3 @@ if __name__ == '__main__':
     data.viz_dfg("white")
     data.viz_bpmn("white")
     data.viz_process_map("white")
-    
