@@ -1,19 +1,17 @@
 # %%
 import tensorflow as tf
+import numpy as np
 
-class MyModel(tf.keras.Model):
-    def __init__(self):
-        super(MyModel, self).__init__()
-        self.dense1 = tf.keras.layers.Dense(4, activation=tf.nn.relu)
-        self.dense2 = tf.keras.layers.Dense(5, activation=tf.nn.softmax)
-        self.dropout = tf.keras.layers.Dropout(0.5)
-
-    def call(self, inputs, training=False):
-        x = self.dense1(inputs)
-        if training:
-            x = self.dropout(x, training=training)
-        return self.dense2(x)
-
-model = MyModel()
-model.build()
+x = tf.constant(np.arange(0,9).reshape((3,3)))
+x
+# %%
+positions = tf.range(start=1, limit=4)
+positions
+# %%
+zero_indices = tf.cast(x != 0, tf.int32)
+# %%
+all_pos = tf.repeat(tf.transpose(tf.reshape(positions, (-1, 1))), 3, axis=0)
+all_pos
+# %%
+all_pos * zero_indices
 # %%

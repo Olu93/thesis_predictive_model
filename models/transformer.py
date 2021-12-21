@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-from tensorflow.keras.layers import TimeDistributed, Activation, Dense, Dropout, Embedding
+from tensorflow.keras.layers import TimeDistributed, Activation, Dense, Dropout, Embedding, Multiply
 from tensorflow.keras.models import Model
 
 
@@ -56,17 +56,16 @@ class TransformerBlock(layers.Layer):
 class TokenAndPositionEmbedding(layers.Layer):
     def __init__(self, maxlen, vocab_size, embed_dim):
         super(TokenAndPositionEmbedding, self).__init__()
-        self.token_emb = layers.Embedding(input_dim=vocab_size, output_dim=embed_dim, mask_zero=1)
-        self.pos_emb = layers.Embedding(input_dim=maxlen, output_dim=embed_dim, mask_zero=1)
+        self.token_emb = layers.Embedding(input_dim=vocab_size, output_dim=embed_dim, mask_zero=0)
+        self.pos_emb = layers.Embedding(input_dim=maxlen, output_dim=embed_dim, mask_zero=0)
         self.zero = tf.constant(0, dtype=tf.float32)
+        self.multiply = Multiply()
 
     def call(self, x):
         maxlen = tf.shape(x)[-1]
-        positions = tf.range(start=1, limit=maxlen, delta=1)
-        ones_matrix = tf.cast(tf.ones_like(tf.shape(x)), tf.float32)
-        zero_indices = tf.cast(tf.equal(x, self.zero), tf.int64)
-        ones_matrix[tf.where(zero_indices)] = self.zero
-        positions = positions * ones_matrix
-        positions = self.pos_emb(tf.cast(positions, tf.int64))
+        positions = tf.range(start=0, limit=maxlen, delta=1, dtype=tf.float32)
+        # zero_indices = tf.cast(tf.not_equal(x, self.zero), tf.float32)
+        # positions = self.multiply([positions, zero_indices])
+        positions = self.pos_emb(tf.cast(positions, tf.int32))
         x = self.token_emb(x)
-        return x + positions
+        return (x + positions) 
