@@ -308,9 +308,11 @@ class AbstractProcessLogReader():
 class CSVLogReader(AbstractProcessLogReader):
     def __init__(self, log_path: str, csv_path: str, sep=",", **kwargs) -> None:
         super().__init__(log_path, csv_path, **kwargs)
-        self._original_data = pd.read_csv(self.log_path, sep=sep)
+        self.sep = sep
+        
 
     def init_log(self, save=False):
+        self._original_data = pd.read_csv(self.log_path, sep=self.sep)
         col_mappings = {
             self.col_timestamp: "time:timestamp",
             self.col_activity_id: "concept:name",
@@ -337,6 +339,12 @@ class CSVLogReader(AbstractProcessLogReader):
         if save:
             self._original_data.to_csv(self.csv_path, index=False)
         return self
+    
+    def init_data(self):
+        self.col_timestamp = "time:timestamp"
+        self.col_activity_id = "concept:name"
+        self.col_case_id = "case:concept:name"
+        return super().init_data()
 
 
 if __name__ == '__main__':

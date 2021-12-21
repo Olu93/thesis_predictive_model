@@ -58,14 +58,14 @@ class TokenAndPositionEmbedding(layers.Layer):
         super(TokenAndPositionEmbedding, self).__init__()
         self.token_emb = layers.Embedding(input_dim=vocab_size, output_dim=embed_dim, mask_zero=1)
         self.pos_emb = layers.Embedding(input_dim=maxlen, output_dim=embed_dim, mask_zero=1)
-        self.zero = tf.constant([0], dtype=tf.float32)
+        self.zero = tf.constant(0, dtype=tf.float32)
 
     def call(self, x):
         maxlen = tf.shape(x)[-1]
         positions = tf.range(start=1, limit=maxlen, delta=1)
-        ones_matrix = tf.ones_like(tf.shape(x))
-        zero_indices = tf.equal(x, self.zero)
-        ones_matrix = ones_matrix * zero_indices
+        ones_matrix = tf.cast(tf.ones_like(tf.shape(x)), tf.float32)
+        zero_indices = tf.cast(tf.equal(x, self.zero), tf.int64)
+        ones_matrix[tf.where(zero_indices)] = self.zero
         positions = positions * ones_matrix
         positions = self.pos_emb(tf.cast(positions, tf.int64))
         x = self.token_emb(x)
