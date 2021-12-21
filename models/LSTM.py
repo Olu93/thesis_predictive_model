@@ -16,6 +16,7 @@ class SimpleLSTMModel(Model):
         # self.inputs = InputLayer(input_shape=(max_len,))
         self.embedding = Embedding(vocab_len, embed_dim, mask_zero=0)
         self.lstm_layer = Bidirectional(LSTM(ff_dim, return_sequences=True))
+        # self.lstm_layer = LSTM(ff_dim, return_sequences=True)
         self.time_distributed_layer = TimeDistributed(Dense(vocab_len))
         self.activation_layer = Activation('softmax')
 
