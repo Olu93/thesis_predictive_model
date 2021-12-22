@@ -7,7 +7,6 @@ import tensorflow.keras as keras
 from tensorflow.python.keras.engine.base_layer import Layer
 from keras.utils.vis_utils import plot_model
 
-
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
@@ -18,17 +17,24 @@ class Seq2seqLSTMModelUnidrectional(Model):
         super(Seq2seqLSTMModelUnidrectional, self).__init__()
         self.max_len = max_len
         self.embed_dim = embed_dim
-        
+
         self.embedding = Embedding(vocab_len, embed_dim, mask_zero=0)
         self.encoder = LSTM(ff_dim, return_sequences=True, return_state=True)
+        self.concat = layers.Concatenate()
+        self.pad = layers.ZeroPadding1D((0, 1))
         self.decoder = LSTM(ff_dim, return_sequences=True, return_state=True)
+        self.time_distributed_layer = TimeDistributed(Dense(vocab_len))
         self.activation_layer = Activation('softmax')
 
     def call(self, inputs):
-        x = self.embedding(inputs)
-        enc = self.encoder(x)
-        dec = self.decoder(enc)
-        y_pred = self.activation_layer(dec)
+        x_enc = self.embedding(inputs)
+        x_dec = self.embedding(inputs[:, 1:])
+        x_dec = self.pad(x_dec)
+        h_enc, _, _ = self.encoder(x_enc)
+        dec_input = self.concat([h_enc, x_dec])
+        h_dec, _, _ = self.decoder(dec_input)
+        logits = self.time_distributed_layer(h_dec)
+        y_pred = self.activation_layer(logits)
         return y_pred
 
     def summary(self):
@@ -60,7 +66,6 @@ class Seq2seqLSTMModelUnidrectional(Model):
 #         x = Input(shape=(self.max_len, self.embed_dim))
 #         model = Model(inputs=[x], outputs=self.call(x))
 #         return model.summary()
-
 
 # class Decoder(Layer):
 #     # https://stackoverflow.com/a/43531172/4162265

@@ -42,10 +42,7 @@ def results_by_instance_seq2seq(idx2vocab, start_id, end_id, test_dataset, model
         last_word_test = np.max([np.argmax(row_y_test == 0), 1])
         last_word_pred = np.max([np.argmax(row_y_pred == 0), 1])
         last_word_x = np.argmax(row_x_test == 0)
-        # last_word_test = last_word_test + 1 if last_word_test != 0 else len(row_y_test) + 1
-        # last_word_pred = last_word_pred + 1 if last_word_pred != 0 else len(row_y_pred) + 1
         longer_sequence_stop = max([last_word_test, last_word_pred])
-        # last_word_test, last_word_pred = take_non_zeros_test[0].max() + 1, take_non_zeros_pred[0].max() + 1
         instance_result = {
             "trace": idx,
             f"full_{SEQUENCE_LENGTH}": last_word_test+last_word_x,
