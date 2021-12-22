@@ -5,7 +5,7 @@
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
-dataset_bpic20*/
+data/dataset_*/
 junk/test*
 __pycache__/
 *.py[cod]
