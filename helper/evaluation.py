@@ -2,8 +2,8 @@ from collections import defaultdict
 
 from tensorflow.python.keras.metrics import CategoricalAccuracy
 from helper.constants import NUMBER_OF_INSTANCES, SEQUENCE_LENGTH
-from models.lstm import SimpleLSTMModel
-from models.transformer import TransformerModel
+from models.lstm import SimpleLSTMModelUnidrectional
+from models.transformer import TransformerModelUnidirectional
 from readers.BPIC12 import BPIC12W
 import tensorflow as tf
 import numpy as np
@@ -190,7 +190,7 @@ if __name__ == "__main__":
     val_dataset = data.get_val_dataset().take(100)
     test_dataset = data.get_test_dataset()
 
-    model = SimpleLSTMModel(data.vocab_len, data.max_len)
+    model = SimpleLSTMModelUnidrectional(data.vocab_len, data.max_len)
     # model = TransformerModel(data.vocab_len, data.max_len)
     model.build((None, data.max_len))
     model.compile(loss='categorical_crossentropy', optimizer=Adam(0.001), metrics=[CategoricalAccuracy()])

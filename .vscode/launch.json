@@ -12,6 +12,12 @@
       "module": "readers.AbstractProcessLogReader",
     },
     {
+      "name": "Test Model Call",
+      "type": "python",
+      "request": "launch",
+      "module": "models.${fileBasenameNoExtension}",
+    },
+    {
       "name": "Load Reader",
       "type": "python",
       "request": "launch",

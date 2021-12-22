@@ -3,8 +3,8 @@ from tensorflow.keras.layers import Dense, LSTM, InputLayer, Bidirectional, Time
 from tensorflow.keras.optimizers import Adam
 import tensorflow as tf
 from helper.evaluation import FULL, results_by_instance, results_by_len, show_predicted_seq
-from models.lstm import SimpleLSTMModel
-from models.transformer import TransformerModel
+from models.lstm import SimpleLSTMModelBidrectional, SimpleLSTMModelUnidrectional
+from models.transformer import TransformerModelBidirectional, TransformerModelUnidirectional
 
 from readers.BPIC12 import BPIC12W
 from readers import RequestForPaymentLogReader
@@ -23,27 +23,33 @@ if __name__ == "__main__":
     epochs = 1
     batch_size = 10
     adam_init = 0.001
-
-    print("LSTM:")
-    lstm_model = SimpleLSTMModel(data.vocab_len, data.max_len)
-    lstm_model.build((None, data.max_len))
-    lstm_model.compile(loss='categorical_crossentropy', optimizer=Adam(adam_init), metrics=['accuracy'])
-    lstm_model.summary()
     start_id = data.start_id
     end_id = data.end_id
+
+    print("LSTM Uni:")
+    lstm_model = SimpleLSTMModelUnidrectional(data.vocab_len, data.max_len)
+    lstm_model.compile(loss='categorical_crossentropy', optimizer=Adam(adam_init), metrics=['accuracy'])
+    lstm_model.summary()
     lstm_model.fit(train_dataset, batch_size=batch_size, epochs=epochs, validation_data=val_dataset)
     results_by_instance(data.idx2vocab, start_id, end_id, test_dataset, lstm_model, 'results/LSTM_by_instance.csv')
-    # results_by_len(data.idx2vocab, test_dataset, lstm_model, 'results/LSTM_by_len.csv')
-    # show_predicted_seq(data.idx2vocab, test_dataset, lstm_model, save_path='results/LSTM_decoded_sequences_None.csv', mode=None)
-    # show_predicted_seq(data.idx2vocab, test_dataset, lstm_model, save_path='results/LSTM_decoded_sequences_FULL.csv', mode=FULL)
 
-    print("Transformer:")
-    transformer_model = TransformerModel(data.vocab_len, data.max_len)
-    transformer_model.build((None, data.max_len))
+    print("LSTM Bi:")
+    lstm_model = SimpleLSTMModelBidrectional(data.vocab_len, data.max_len)
+    lstm_model.compile(loss='categorical_crossentropy', optimizer=Adam(adam_init), metrics=['accuracy'])
+    lstm_model.summary()
+    lstm_model.fit(train_dataset, batch_size=batch_size, epochs=epochs, validation_data=val_dataset)
+    results_by_instance(data.idx2vocab, start_id, end_id, test_dataset, lstm_model, 'results/LSTM_by_instance_bi.csv')
+
+    print("Transformer Uni:")
+    transformer_model = TransformerModelUnidirectional(data.vocab_len, data.max_len)
     transformer_model.compile(loss='categorical_crossentropy', optimizer=Adam(adam_init), metrics=['accuracy'])
     transformer_model.summary()
     transformer_model.fit(train_dataset, batch_size=batch_size, epochs=epochs, validation_data=val_dataset)
     results_by_instance(data.idx2vocab, start_id, end_id, test_dataset, transformer_model, 'results/Transformer_by_instance.csv')
-    # results_by_len(data.idx2vocab, test_dataset, transformer_model, 'results/Transformer_by_len.csv')
-    # show_predicted_seq(data.idx2vocab, test_dataset, transformer_model, save_path='results/Transformer_decoded_sequences_None.csv', mode=None)
-    # show_predicted_seq(data.idx2vocab, test_dataset, transformer_model, save_path='results/Transformer_decoded_sequences_FULL.csv', mode=FULL)
+
+    print("Transformer Bi:")
+    transformer_model = TransformerModelBidirectional(data.vocab_len, data.max_len)
+    transformer_model.compile(loss='categorical_crossentropy', optimizer=Adam(adam_init), metrics=['accuracy'])
+    transformer_model.summary()
+    transformer_model.fit(train_dataset, batch_size=batch_size, epochs=epochs, validation_data=val_dataset)
+    results_by_instance(data.idx2vocab, start_id, end_id, test_dataset, transformer_model, 'results/Transformer_by_instance_bi.csv')
