@@ -38,19 +38,18 @@ def results_by_instance(idx2vocab, start_id, end_id, test_dataset, model, save_p
     y_pred_masked = model.predict(X_test).argmax(axis=-1)
     iterator = enumerate(zip(X_test, y_test, y_pred_masked))
     for idx, (row_X_test, row_y_test, row_y_pred) in tqdm(iterator, total=len(y_test)):
-        last_word_test = np.argmax(row_y_test == end_id)
-        last_word_pred = np.argmax(row_y_pred == end_id)
-        last_word_test = last_word_test + 1 if last_word_test != 0 else len(row_y_test) + 1
-        last_word_pred = last_word_pred + 1 if last_word_pred != 0 else len(row_y_pred) + 1
+        last_word_test = np.argmax(row_y_test == 0)
+        last_word_pred = np.argmax(row_y_pred == 0)
+        # last_word_test = last_word_test + 1 if last_word_test != 0 else len(row_y_test) + 1
+        # last_word_pred = last_word_pred + 1 if last_word_pred != 0 else len(row_y_pred) + 1
         longer_sequence_stop = max([last_word_test, last_word_pred])
         # last_word_test, last_word_pred = take_non_zeros_test[0].max() + 1, take_non_zeros_pred[0].max() + 1
-        row_y_test_zeros, row_y_pred_zeros = row_y_test[:longer_sequence_stop], row_y_pred[:longer_sequence_stop]
         instance_result = {
             "trace": idx,
             f"true_{SEQUENCE_LENGTH}": last_word_test,
             f"pred_{SEQUENCE_LENGTH}": last_word_pred,
         }
-        instance_result.update(compute_traditional_metrics(mode, row_y_test_zeros, row_y_pred_zeros))
+        instance_result.update(compute_traditional_metrics(mode, row_y_test[:longer_sequence_stop], row_y_pred[:longer_sequence_stop]))
         instance_result.update(compute_sequence_metrics(row_y_test[:last_word_test], row_y_pred[:last_word_pred]))
         instance_result.update(compute_pred_seq(idx2vocab, row_y_pred, row_y_test, row_X_test, last_word_test, last_word_pred))
         eval_results.append(instance_result)
