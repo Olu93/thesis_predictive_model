@@ -6,6 +6,7 @@
 ### Python ###
 # Byte-compiled / optimized / DLL files
 data/dataset_*/
+results/test_*.csv
 junk/test*
 __pycache__/
 *.py[cod]
