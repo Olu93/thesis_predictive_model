@@ -38,7 +38,7 @@ l_res_bi = extract_plot_data(METRIC, lstm_results_bi)
 
 
 def plot_all(METRIC, plot_curve, t_res, l_res, t_res_bi, l_res_bi):
-    fig, axes = plt.subplots(2, 1, sharey=True, sharex=True, figsize=(10, 15))
+    fig, axes = plt.subplots(1, 2, sharey=True, sharex=True, figsize=(20, 7))
     ax = axes[0]
     plot_curve(ax, t_res, color="red", title="Transformer Uni")
     plot_curve(ax, l_res, color="blue", title="LSTM Uni")
