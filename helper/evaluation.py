@@ -4,7 +4,6 @@ from tensorflow.python.keras.metrics import CategoricalAccuracy
 from helper.constants import NUMBER_OF_INSTANCES, SEQUENCE_LENGTH
 from models.lstm import SimpleLSTMModelUnidrectional
 from models.transformer import TransformerModelUnidirectional
-from readers.BPIC12 import BPIC12W
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras.optimizers import Adam

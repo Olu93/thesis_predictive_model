@@ -3,8 +3,6 @@ from tensorflow.keras.layers import Dense, LSTM, Bidirectional, TimeDistributed,
 from tensorflow.keras.optimizers import Adam
 import tensorflow as tf
 import tensorflow.keras as keras
-from readers.BPIC12 import BPIC12W
-from readers import RequestForPaymentLogReader
 
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)

@@ -1,3 +1,3 @@
-from .BPIC12 import BPIC12W
+from .BPIC12LogReader import BPIC12LogReader
 from .PermitLogReader import PermitLogReader
 from .RequestForPaymentLogReader import RequestForPaymentLogReader
