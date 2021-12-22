@@ -12,9 +12,9 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 
 # https://keras.io/guides/functional_api/
-class Seq2seqLSTMModelUnidrectional(Model):
+class Seq2seqLSTMModelOneWay(Model):
     def __init__(self, vocab_len, max_len, embed_dim=10, ff_dim=20):
-        super(Seq2seqLSTMModelUnidrectional, self).__init__()
+        super(Seq2seqLSTMModelOneWay, self).__init__()
         self.max_len = max_len
         self.embed_dim = embed_dim
 
@@ -87,7 +87,7 @@ class Seq2seqLSTMModelUnidrectional(Model):
 #         return model.summary()
 
 
-class Seq2SeqLSTMModelBidrectional(Seq2seqLSTMModelUnidrectional):
+class Seq2SeqLSTMModelBidrectional(Seq2seqLSTMModelOneWay):
     def __init__(self, vocab_len, max_len, embed_dim=10, ff_dim=20):
         super(Seq2SeqLSTMModelBidrectional, self).__init__(vocab_len, max_len, embed_dim=10, ff_dim=20)
         self.encoder_layer = Bidirectional(LSTM(ff_dim, return_state=True))
