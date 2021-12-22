@@ -4,7 +4,7 @@ from tensorflow.keras.optimizers import Adam
 import tensorflow as tf
 from helper.evaluation import FULL, results_by_instance, results_by_instance_seq2seq, results_by_len, show_predicted_seq
 from models.lstm import SimpleLSTMModelTwoWay, SimpleLSTMModelOneWay
-from models.seq2seq_lstm import Seq2SeqLSTMModelUnidrectional
+from models.seq2seq_lstm import Seq2seqLSTMModelUnidrectional
 from models.transformer import TransformerModelTwoWay, TransformerModelOneWay
 from readers.AbstractProcessLogReader import AbstractProcessLogReader, TaskModes
 import pathlib
@@ -66,7 +66,8 @@ if __name__ == "__main__":
     batch_size = 10
     adam_init = 0.001
     num_instances = {"num_train": 100, "num_val": 100, "num_test": 100}
-    r1 = Runner(data, SimpleLSTMModelOneWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model().save_csv(folder, "test")
-    r2 = Runner(data, SimpleLSTMModelTwoWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model().save_csv(folder, "test")
-    r3 = Runner(data, TransformerModelOneWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model().save_csv(folder, "test")
-    r4 = Runner(data, TransformerModelTwoWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model().save_csv(folder, "test")
+    r1 = Runner(data, Seq2seqLSTMModelUnidrectional(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model().save_csv(folder, "test")
+    # r1 = Runner(data, SimpleLSTMModelOneWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model().save_csv(folder, "test")
+    # r2 = Runner(data, SimpleLSTMModelTwoWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model().save_csv(folder, "test")
+    # r3 = Runner(data, TransformerModelOneWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model().save_csv(folder, "test")
+    # r4 = Runner(data, TransformerModelTwoWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model().save_csv(folder, "test")
