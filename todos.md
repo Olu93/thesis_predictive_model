@@ -9,7 +9,7 @@
     * [x] Implement Longest Common  
     * [ ] Implement Embedding Cosine Similarity
     * [ ] Implement Embedding Eucledian Distance
-- [ ] Check the results
+- [x] Check the results
 - [ ] Investigate process discovery
 - [x] Implement mass int to string decoder
 - [x] Implement dataset statistics 

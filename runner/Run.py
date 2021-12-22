@@ -6,14 +6,14 @@ from helper.evaluation import FULL, results_by_instance, results_by_len, show_pr
 from models.lstm import SimpleLSTMModelBidrectional, SimpleLSTMModelUnidrectional
 from models.transformer import TransformerModelBidirectional, TransformerModelUnidirectional
 
-from readers.BPIC12 import BPIC12W
+from readers.BPIC12LogReader import BPIC12LogReader
 from readers import RequestForPaymentLogReader
 
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 if __name__ == "__main__":
-    data = BPIC12W(debug=False, subset=BPIC12W.subsets.W)
+    data = BPIC12LogReader(debug=False, subset=BPIC12LogReader.subsets.W)
     # data = data.init_log(save=True)
     data = data.init_data()
     train_dataset = data.get_train_dataset()
