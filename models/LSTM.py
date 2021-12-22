@@ -35,6 +35,7 @@ class SimpleLSTMModelUnidrectional(Model):
 
 
 class SimpleLSTMModelBidrectional(SimpleLSTMModelUnidrectional):
+    # Makes no sense
     def __init__(self, vocab_len, max_len, embed_dim=10, ff_dim=20):
         super(SimpleLSTMModelBidrectional, self).__init__(vocab_len, max_len, embed_dim=10, ff_dim=20)
         self.lstm_layer = Bidirectional(LSTM(ff_dim, return_sequences=True))

@@ -28,12 +28,14 @@ from pm4py.visualization.heuristics_net import visualizer as hn_visualizer
 TO_EVENT_LOG = log_converter.Variants.TO_EVENT_LOG
 
 
+
+
 class TaskModes(Enum):
     SIMPLE = auto()
     EXTENSIVE = auto()
     EXTENSIVE_RANDOM = auto()
     FINAL_OUTCOME = auto()
-
+    ENCODER_DECODER = auto()
 
 class DatasetModes(Enum):
     TRAIN = auto()
@@ -68,7 +70,7 @@ class AbstractProcessLogReader():
                  mode: TaskModes = TaskModes.SIMPLE,
                  max_tokens: int = None,
                  **kwargs) -> None:
-        super().__init__(**kwargs)
+        super(AbstractProcessLogReader, self).__init__(**kwargs)
         self.vocab_len = None
         self.debug = debug
         self.mode = mode
@@ -176,6 +178,9 @@ class AbstractProcessLogReader():
         loader = (start_id + [self.vocab2idx[word] for word in tr] + end_id for tr in loader)
         if self.mode == TaskModes.SIMPLE:
             self.traces = ([tr[0:], tr[1:]] for tr in loader if len(tr) > 1)
+
+        if self.mode == TaskModes.ENCODER_DECODER:
+            self.traces = ([tr[0:split], tr[split:]] for tr in loader if len(tr) > 1 for split in [random.randint(1, len(tr))])
 
         if self.mode == TaskModes.EXTENSIVE:
             self.traces = ([tr[0:end - 1], tr[1:end]] for tr in loader for end in range(2, len(tr) + 1) if len(tr) > 1)
@@ -309,7 +314,6 @@ class CSVLogReader(AbstractProcessLogReader):
     def __init__(self, log_path: str, csv_path: str, sep=",", **kwargs) -> None:
         super().__init__(log_path, csv_path, **kwargs)
         self.sep = sep
-        
 
     def init_log(self, save=False):
         self._original_data = pd.read_csv(self.log_path, sep=self.sep)
@@ -339,7 +343,7 @@ class CSVLogReader(AbstractProcessLogReader):
         if save:
             self._original_data.to_csv(self.csv_path, index=False)
         return self
-    
+
     def init_data(self):
         self.col_timestamp = "time:timestamp"
         self.col_activity_id = "concept:name"
@@ -348,15 +352,20 @@ class CSVLogReader(AbstractProcessLogReader):
 
 
 if __name__ == '__main__':
-    data = AbstractProcessLogReader(log_path='data/dataset_bpic2020_tu_travel/RequestForPayment.xes', csv_path='data/RequestForPayment.csv', mode=TaskModes.SIMPLE)
+    data = AbstractProcessLogReader(
+        log_path='data/dataset_bpic2020_tu_travel/RequestForPayment.xes',
+        csv_path='data/RequestForPayment.csv',
+        mode=TaskModes.ENCODER_DECODER,
+    )
     # data = data.init_log(save=0)
     data = data.init_data()
     ds_counter = data.get_train_dataset()
 
-    print(next(iter(ds_counter.take(10)))[0].shape)
-    print(next(iter(ds_counter))[0].shape)
+    for data_point in ds_counter:
+        print(data_point[0])
+        print(tf.argmax(data_point[1], axis=-1))
     print(data.get_data_statistics())
     print(data.get_example_trace_subset())
-    data.viz_dfg("white")
-    data.viz_bpmn("white")
-    data.viz_process_map("white")
+    # data.viz_dfg("white")
+    # data.viz_bpmn("white")
+    # data.viz_process_map("white")

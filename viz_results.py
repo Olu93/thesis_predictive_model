@@ -12,7 +12,7 @@ METRIC = "damerau_levenshtein"
 
 # %%
 def extract_plot_data(METRIC, results):
-    t_res = results.groupby("true_seq_len").agg(["mean", "std", "median"])[METRIC]
+    t_res = results.groupby("input_x_seq_len").agg(["mean", "std", "median"])[METRIC]
     t_res = t_res.fillna(0.001)
     t_res["min"] = t_res["mean"] - (2 * t_res["std"])
     t_res["max"] = t_res["mean"] + (2 * t_res["std"])

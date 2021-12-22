@@ -13,12 +13,56 @@ import pandas as pd
 from tqdm import tqdm
 import textdistance
 
+from readers.BPIC12LogReader import BPIC12LogReader
+ 
 STEP1 = "Step 1: Iterate through data"
 STEP2 = "Step 2: Compute Metrics"
 STEP3 = "Step 3: Save results"
 FULL = 'FULL'
 symbol_mapping = {index: char for index, char in enumerate(set([chr(i) for i in range(1, 3000) if len(chr(i)) == 1]))}
 
+
+def results_by_instance_seq2seq(idx2vocab, start_id, end_id, test_dataset, model, save_path=None, mode='weighted'):
+    print("Start results by instance evaluation")
+    print(STEP1)
+    test_set_list = list()
+    for instance in test_dataset:
+        test_set_list.append(instance)
+    X_test, y_test = zip(*test_set_list)
+    X_test, y_test = np.vstack(X_test), np.vstack(y_test).argmax(axis=-1)
+    non_zero_indices = np.nonzero(y_test)
+    non_zero_mask = np.zeros_like(y_test)
+    non_zero_mask[non_zero_indices] = 1
+
+    print(STEP2)
+    eval_results = []
+    y_pred_masked = model.predict(X_test).argmax(axis=-1)
+    iterator = enumerate(zip(X_test, y_test, y_pred_masked))
+    for idx, (row_x_test, row_y_test, row_y_pred) in tqdm(iterator, total=len(y_test)):
+        last_word_test = np.max([np.argmax(row_y_test == 0), 1])
+        last_word_pred = np.max([np.argmax(row_y_pred == 0), 1])
+        last_word_x = np.argmax(row_x_test == 0)
+        # last_word_test = last_word_test + 1 if last_word_test != 0 else len(row_y_test) + 1
+        # last_word_pred = last_word_pred + 1 if last_word_pred != 0 else len(row_y_pred) + 1
+        longer_sequence_stop = max([last_word_test, last_word_pred])
+        # last_word_test, last_word_pred = take_non_zeros_test[0].max() + 1, take_non_zeros_pred[0].max() + 1
+        instance_result = {
+            "trace": idx,
+            f"full_{SEQUENCE_LENGTH}": last_word_test+last_word_x,
+            f"input_x_{SEQUENCE_LENGTH}": last_word_x,
+            f"true_y_{SEQUENCE_LENGTH}": last_word_test,
+            f"pred_y_{SEQUENCE_LENGTH}": last_word_pred,
+        }
+        instance_result.update(compute_traditional_metrics(mode, row_y_test[:longer_sequence_stop], row_y_pred[:longer_sequence_stop]))
+        instance_result.update(compute_sequence_metrics(row_y_test[:last_word_test], row_y_pred[:last_word_pred]))
+        instance_result.update(compute_pred_seq2seq(idx2vocab, row_y_pred[:last_word_pred], row_y_test[:last_word_test], row_x_test[:last_word_x]))
+        eval_results.append(instance_result)
+
+    results = pd.DataFrame(eval_results)
+    print(STEP3)
+    print(results)
+    if save_path:
+        results.to_csv(save_path, index=None)
 
 def results_by_instance(idx2vocab, start_id, end_id, test_dataset, model, save_path=None, mode='weighted'):
     print("Start results by instance evaluation")
@@ -86,6 +130,18 @@ def compute_sequence_metrics(true_seq, pred_seq):
     }
     return dict_instance_distances
 
+
+def compute_pred_seq2seq(idx2vocab, row_y_pred, row_y_test, row_x_test):
+    x_convert = [f"{i:03d}" for i in row_x_test]
+    return {
+        "input": " | ".join(["-".join(x_convert[:lim + 1]) for lim in range(len(x_convert))]),
+        "true_encoded": " -> ".join([f"{i:03d}" for i in row_y_test]),
+        "pred_encoded": " -> ".join([f"{i:03d}" for i in row_y_pred]),
+        "true_encoded_with_padding": " -> ".join([f"{i:03d}" for i in row_y_test]),
+        "pred_encoded_with_padding": " -> ".join([f"{i:03d}" for i in row_y_pred]),
+        "true_decoded": " -> ".join([idx2vocab[i] for i in row_y_test]),
+        "pred_decoded": " -> ".join([idx2vocab[i] for i in row_y_pred]),
+    }
 
 def compute_pred_seq(idx2vocab, row_y_pred, row_y_test, row_x_test, last_word_test, last_word_pred):
     x_convert = [f"{i:03d}" for i in row_x_test[:last_word_test]]
@@ -181,7 +237,7 @@ def damerau_levenshtein_score(true_seq, pred_seq):
 
 
 if __name__ == "__main__":
-    data = BPIC12W(debug=False)
+    data = BPIC12LogReader(debug=False)
     data = data.init_log(True)
     data = data.init_data()
     train_dataset = data.get_train_dataset().take(1000)
@@ -196,7 +252,7 @@ if __name__ == "__main__":
 
     model.fit(train_dataset, batch_size=100, epochs=1, validation_data=val_dataset)
 
-    results_by_instance(data.idx2vocab, data.start_id, data.end_id, test_dataset, model, 'junk/test1_.csv')
+    results_by_instance_seq2seq(data.idx2vocab, data.start_id, data.end_id, test_dataset, model, 'junk/test1_.csv')
     # results_by_len(data.idx2vocab, test_dataset, model, 'junk/test2_.csv')
     # show_predicted_seq(data.idx2vocab, test_dataset, model, save_path='junk/test3_.csv', mode=None)
     # show_predicted_seq(data.idx2vocab, test_dataset, model, save_path='junk/test4_.csv', mode=FULL)
