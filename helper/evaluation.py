@@ -22,7 +22,7 @@ FULL = 'FULL'
 symbol_mapping = {index: char for index, char in enumerate(set([chr(i) for i in range(1, 3000) if len(chr(i)) == 1]))}
 
 
-def results_by_instance_seq2seq(idx2vocab, start_id, end_id, test_dataset, model, save_path=None, mode='weighted'):
+def results_by_instance_seq2seq(idx2vocab, start_id, end_id, test_dataset, model, mode='weighted'):
     print("Start results by instance evaluation")
     print(STEP1)
     test_set_list = list()
@@ -61,8 +61,7 @@ def results_by_instance_seq2seq(idx2vocab, start_id, end_id, test_dataset, model
     results = pd.DataFrame(eval_results)
     print(STEP3)
     print(results)
-    if save_path:
-        results.to_csv(save_path, index=None)
+    return results
 
 def results_by_instance(idx2vocab, start_id, end_id, test_dataset, model, save_path=None, mode='weighted'):
     print("Start results by instance evaluation")
