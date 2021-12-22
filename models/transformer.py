@@ -7,9 +7,9 @@ from tensorflow.python.keras.layers.wrappers import Bidirectional
 from tensorflow.python.keras.optimizer_v2.adam import Adam
 
 
-class TransformerModelUnidirectional(Model):
+class TransformerModelOneWay(Model):
     def __init__(self, vocab_len, max_len, embed_dim=10, ff_dim=10, num_heads=3, rate1=0.1, rate2=0.1):
-        super(TransformerModelUnidirectional, self).__init__()
+        super(TransformerModelOneWay, self).__init__()
         self.max_len = max_len
         self.embedding = TokenAndPositionEmbedding(max_len, vocab_len, embed_dim)
         self.transformer_block = TransformerBlock(embed_dim, num_heads, ff_dim, rate1)
@@ -38,9 +38,9 @@ class TransformerModelUnidirectional(Model):
         return model.summary()
 
 
-class TransformerModelBidirectional(TransformerModelUnidirectional):
+class TransformerModelTwoWay(TransformerModelOneWay):
     def __init__(self, vocab_len, max_len, embed_dim=10, ff_dim=10, num_heads=3, rate1=0.1, rate2=0.1) -> None:
-        super(TransformerModelBidirectional, self).__init__(vocab_len, max_len, embed_dim=10, ff_dim=10, num_heads=3, rate1=0.1, rate2=0.1)
+        super(TransformerModelTwoWay, self).__init__(vocab_len, max_len, embed_dim=10, ff_dim=10, num_heads=3, rate1=0.1, rate2=0.1)
         self.embedding = TokenAndPositionEmbedding(max_len, vocab_len, embed_dim)
         self.embedding_reverse = TokenAndPositionEmbedding(max_len, vocab_len, embed_dim)
         self.reverse = tf.keras.layers.Lambda(lambda x: tf.keras.backend.reverse(x, axes=-1), output_shape=(max_len, ))
@@ -133,7 +133,7 @@ if __name__ == "__main__":
     )
     inputs = tf.constant(padded_inputs)
     print("Transformer Bi:")
-    transformer_model = TransformerModelBidirectional(vocab_len, max_len)
+    transformer_model = TransformerModelTwoWay(vocab_len, max_len)
     transformer_model.compile(loss='categorical_crossentropy', optimizer=Adam(adam_init), metrics=['accuracy'])
     transformer_model.summary()
 

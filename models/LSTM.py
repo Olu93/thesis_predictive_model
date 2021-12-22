@@ -8,9 +8,10 @@ physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 # https://keras.io/guides/functional_api/
-class SimpleLSTMModelUnidrectional(Model):
+class SimpleLSTMModelOneWay(Model):
+    # name = 'lstm_unidirectional'
     def __init__(self, vocab_len, max_len, embed_dim=10, ff_dim=20):
-        super(SimpleLSTMModelUnidrectional, self).__init__()
+        super(SimpleLSTMModelOneWay, self).__init__()
         self.max_len = max_len
         # self.inputs = InputLayer(input_shape=(max_len,))
         self.embedding = Embedding(vocab_len, embed_dim, mask_zero=0)
@@ -25,7 +26,6 @@ class SimpleLSTMModelUnidrectional(Model):
         x = self.lstm_layer(x)
         x = self.time_distributed_layer(x)
         y_pred = self.activation_layer(x)
-        
         return y_pred
 
     def summary(self):
@@ -34,8 +34,9 @@ class SimpleLSTMModelUnidrectional(Model):
         return model.summary()
 
 
-class SimpleLSTMModelBidrectional(SimpleLSTMModelUnidrectional):
+class SimpleLSTMModelTwoWay(SimpleLSTMModelOneWay):
+    # name = 'lstm_bidirectional'
     # Makes no sense
     def __init__(self, vocab_len, max_len, embed_dim=10, ff_dim=20):
-        super(SimpleLSTMModelBidrectional, self).__init__(vocab_len, max_len, embed_dim=10, ff_dim=20)
+        super(SimpleLSTMModelTwoWay, self).__init__(vocab_len, max_len, embed_dim=10, ff_dim=20)
         self.lstm_layer = Bidirectional(LSTM(ff_dim, return_sequences=True))
