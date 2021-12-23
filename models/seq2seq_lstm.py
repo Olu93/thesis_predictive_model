@@ -11,7 +11,10 @@ physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 
+# https://blog.keras.io/a-ten-minute-introduction-to-sequence-to-sequence-learning-in-keras.html
+# https://stackoverflow.com/questions/36428323/lstm-followed-by-mean-pooling/43531172#43531172
 # https://keras.io/guides/functional_api/
+# https://machinelearningmastery.com/define-encoder-decoder-sequence-sequence-model-neural-machine-translation-keras/
 class SeqToSeqLSTMModelOneWay(Model):
     def __init__(self, vocab_len, max_len, embed_dim=10, ff_dim=20):
         super(SeqToSeqLSTMModelOneWay, self).__init__()
@@ -21,16 +24,19 @@ class SeqToSeqLSTMModelOneWay(Model):
         self.embedding = Embedding(vocab_len, embed_dim, mask_zero=0)
         self.encoder = LSTM(ff_dim, return_sequences=True, return_state=True)
         self.concat = layers.Concatenate()
-        self.pad = layers.ZeroPadding1D((0, 1))
+        self.lpad = layers.ZeroPadding1D((1, 0))
+        self.rpad = layers.ZeroPadding1D((0, 1))
+
         self.decoder = LSTM(ff_dim, return_sequences=True, return_state=True)
         self.time_distributed_layer = TimeDistributed(Dense(vocab_len))
         self.activation_layer = Activation('softmax')
 
     def call(self, inputs):
-        x_enc = self.embedding(inputs)
-        x_dec = self.embedding(inputs[:, 1:])
-        x_dec = self.pad(x_dec)
+        x_enc = self.lpad(self.embedding(inputs[:, :-1]))
+        x_dec = self.embedding(inputs)
+        # x_dec = self.rpad(self.embedding(inputs[:, 1:]))
         h_enc, _, _ = self.encoder(x_enc)
+
         dec_input = self.concat([h_enc, x_dec])
         h_dec, _, _ = self.decoder(dec_input)
         logits = self.time_distributed_layer(h_dec)
@@ -41,6 +47,9 @@ class SeqToSeqLSTMModelOneWay(Model):
         x = Input(shape=(self.max_len, ))
         model = Model(inputs=[x], outputs=self.call(x))
         return model.summary()
+
+    def make_predict_function(self):
+        return super().make_predict_function()
 
 
 # class SimpleEncoder(Layer):

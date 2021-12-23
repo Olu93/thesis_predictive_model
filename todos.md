@@ -1,4 +1,4 @@
-- [ ] Implement edit distance metric
+- [x] Implement edit distance metric
     * [x] Implement Damerau-Levenstein
     * [x] Implement Smith-Watermann (Local Alignment)
     * [x] Implement Needleman-Wunsch (Global Alignment)
@@ -19,9 +19,9 @@
     * [x] number of event 
     * [x] show example of the original trace
 - [ ] Implement model versions with additional data
-- [ ] Add start and end token to sequence
-- [ ] Collect additional datasets
-    * [ ] Sepsis
+- [x] Add start and end token to sequence
+- [x] Collect additional datasets
+    * [x] Sepsis
     * [x] BPIC 2011
     * [x] BPIC 2012 
     * [x] BPIC 2013
@@ -33,7 +33,16 @@
     * [x] BPIC 2018
     * [ ] BPIC 2019
     * [x] BPIC 2020
- [ ] Implement dataset readers
+- [x] Implement dataset readers
+- [x] Overwrite pedict function for seq2seq lstm_model
+    * Take x[:-1] and x[-1] to predict y
+        * x[:-1] goes through encoder to get hidden state h
+        * h and x[-1] goes through encoder to retrieve prediction for next x
+- [ ] Generate counterfactual examples
+    * [ ] Case-based Reasoning / Prototypes and Criticisms
+    * [ ] Generative model
+    * [ ] Just brute force 
+
 
 
 

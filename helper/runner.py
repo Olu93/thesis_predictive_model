@@ -24,14 +24,14 @@ class Runner(object):
 
         self.label = model.name
 
-    def get_results_from_model(self, label=None, train_dataset=None, val_dataset=None, test_dataset=None):
+    def get_results_from_model(self, loss_fn="categorical_crossentropy", label=None, train_dataset=None, val_dataset=None, test_dataset=None):
         label = label or self.label
         train_dataset = train_dataset or self.train_dataset
         val_dataset = val_dataset or self.val_dataset
         test_dataset = test_dataset or self.test_dataset
 
         print(f"{label}:")
-        self.model.compile(loss='categorical_crossentropy', optimizer=Adam(self.adam_init), metrics=['accuracy'])
+        self.model.compile(loss=loss_fn, optimizer=Adam(self.adam_init), metrics=['accuracy'])
         self.model.summary()
         self.model.fit(train_dataset, batch_size=self.batch_size, epochs=self.epochs, validation_data=val_dataset)
         self.results = results_by_instance_seq2seq(self.data.idx2vocab, self.start_id, self.end_id, test_dataset, self.model)
