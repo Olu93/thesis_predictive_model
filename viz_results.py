@@ -26,10 +26,10 @@ def plot_curve(ax, res, color, title):
 
 
 # %%
-transformer_results = pd.read_csv('junk/Transformer_by_instance.csv').set_index("trace")
-lstm_results = pd.read_csv('junk/LSTM_by_instance.csv').set_index("trace")
-transformer_results_bi = pd.read_csv('junk/Transformer_by_instance_bi.csv').set_index("trace")
-lstm_results_bi = pd.read_csv('junk/LSTM_by_instance_bi.csv').set_index("trace")
+transformer_results = pd.read_csv('results/result_seq_to_seq_lstm_model_one_way.csv').set_index("trace")
+lstm_results = pd.read_csv('results/result_simple_lstm_model_one_way.csv').set_index("trace")
+transformer_results_bi = pd.read_csv('results/result_transformer_model_one_way.csv').set_index("trace")
+lstm_results_bi = pd.read_csv('results/result_transformer_model_two_way.csv').set_index("trace")
 
 t_res = extract_plot_data(METRIC, transformer_results)
 l_res = extract_plot_data(METRIC, lstm_results)
