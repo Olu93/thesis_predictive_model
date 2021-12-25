@@ -28,14 +28,13 @@ from pm4py.visualization.heuristics_net import visualizer as hn_visualizer
 TO_EVENT_LOG = log_converter.Variants.TO_EVENT_LOG
 
 
-
-
 class TaskModes(Enum):
     SIMPLE = auto()
     EXTENSIVE = auto()
     EXTENSIVE_RANDOM = auto()
     FINAL_OUTCOME = auto()
     ENCODER_DECODER = auto()
+
 
 class DatasetModes(Enum):
     TRAIN = auto()
@@ -160,14 +159,14 @@ class AbstractProcessLogReader():
         self._vocab_r = {idx: word for word, idx in self._vocab.items()}
 
     def compute_sequences(self):
-        grouped_traces = list(self.data.groupby(by=self.col_case_id))
+        self.grouped_traces = list(self.data.groupby(by=self.col_case_id))
 
-        self._traces = {idx: tuple(df[self.col_activity_id].values) for idx, df in grouped_traces}
+        self._traces = {idx: tuple(df[self.col_activity_id].values) for idx, df in self.grouped_traces}
 
         self.length_distribution = Counter([len(tr) for tr in self._traces.values()])
         self.max_len = max(list(self.length_distribution.keys())) + 2
         self.min_len = min(list(self.length_distribution.keys())) + 2
-        self.instantiate_dataset()
+        self.instantiate_dataset_vector()
 
     def instantiate_dataset(self):
         print("Preprocess data")
@@ -202,6 +201,44 @@ class AbstractProcessLogReader():
         print(f"Train: {len(self.trace_train)} datapoints")
         print(f"Val: {len(self.trace_val)} datapoints")
 
+    def instantiate_dataset_vector(self):
+        print("Preprocess data")
+        loader = tqdm(self._traces.items(), total=len(self._traces))
+        start_id = [self.vocab2idx[self.start_token]]
+        end_id = [self.vocab2idx[self.end_token]]
+
+        loader = ((idx, start_id + [self.vocab2idx[word] for word in tr] + end_id) for idx, tr in loader)
+        if self.mode == TaskModes.SIMPLE:
+            self.traces = ([idx, tr[0:], tr[1:]] for idx, tr in loader if len(tr) > 1)
+
+        if self.mode == TaskModes.ENCODER_DECODER:
+            self.traces = ([idx, tr[0:split], tr[split:]] for idx, tr in loader if len(tr) > 1 for split in [random.randint(1, len(tr))])
+
+        if self.mode == TaskModes.EXTENSIVE:
+            self.traces = ([tr[0:end - 1], tr[1:end]] for tr in loader for end in range(2, len(tr) + 1) if len(tr) > 1)
+
+        if self.mode == TaskModes.EXTENSIVE_RANDOM:
+            tmp_traces = [tr[random.randint(0, len(tr) - 1):] for tr in loader for sample in self._heuristic_bounded_sample_size(tr) if len(tr) > 1]
+            self.traces = [tr[:random.randint(2, len(tr))] for tr in tqdm(tmp_traces, desc="random-samples") if len(tr) > 1]
+
+        if self.mode == TaskModes.FINAL_OUTCOME:
+            self.traces = ([idx, tr[0:], tr[-2] * (len(tr) - 1)] for idx, tr in loader if len(tr) > 1)
+
+        self.trace_idx, self.traces, self.targets = zip(*[tr_couple for tr_couple in tqdm(self.traces)])
+        self.padded_traces = pad_sequences(self.traces, self.max_len, padding='post')
+        self.padded_targets = pad_sequences(self.targets, self.max_len, padding='post')
+
+        self.trace_data, self.trace_test, self.target_data, self.target_test = train_test_split(list(zip(self.trace_idx, self.padded_traces)), self.padded_targets)
+        self.trace_train, self.trace_val, self.target_train, self.target_val = train_test_split(self.trace_data, self.target_data)
+
+        self.trace_train_idx, self.trace_train = zip(*self.trace_train)
+        self.trace_val_idx, self.trace_val = zip(*self.trace_val)
+        self.trace_test_idx, self.trace_test = zip(*self.trace_test)
+
+        print(f"Test: {len(self.trace_test)} datapoints")
+        print(f"Train: {len(self.trace_train)} datapoints")
+        print(f"Val: {len(self.trace_val)} datapoints")
+
     def _heuristic_sample_size(self, sequence):
         return range((len(sequence)**2 + len(sequence)) // 4)
 
@@ -213,15 +250,17 @@ class AbstractProcessLogReader():
         data = None
         set_name = set_name.decode('utf8') if type(set_name) != str else set_name
         if set_name == 'train':
-            data = zip(self.trace_train, self.target_train)
+            data = zip(self.trace_train_idx, self.trace_train, self.target_train)
         if set_name == 'val':
-            data = zip(self.trace_val, self.target_val)
+            data = zip(self.trace_val_idx, self.trace_val, self.target_val)
         if set_name == 'test':
-            data = zip(self.trace_test, self.target_test)
-        for trace, target in data:
+            data = zip(self.trace_test_idx, self.trace_test, self.target_test)
+        for idx, trace, target in data:
             yield trace, to_categorical(target, num_classes=self.vocab_len)
 
     def get_train_dataset(self):
+        
+        
         return tf.data.Dataset.from_generator(
             self._generate_examples,
             args=['train'],
@@ -231,6 +270,7 @@ class AbstractProcessLogReader():
                 None,
             )),
         ).batch(1)
+
 
     def get_val_dataset(self):
         return tf.data.Dataset.from_generator(
