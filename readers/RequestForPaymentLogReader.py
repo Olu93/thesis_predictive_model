@@ -37,6 +37,6 @@ class RequestForPaymentLogReader(AbstractProcessLogReader):
 
 if __name__ == '__main__':
     data = RequestForPaymentLogReader(mode=TaskModes.SIMPLE).init_log(save=True).init_data()
-    ds_counter = data.get_train_dataset()
+    ds_counter = data.get_dataset()
 
     print(next(iter(ds_counter.repeat().batch(10).take(10))))

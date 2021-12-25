@@ -23,7 +23,7 @@ if __name__ == '__main__':
     reader = HospitalReader()
     reader = reader.init_log(save=1) 
     reader = reader.init_data()
-    ds_counter = reader.get_train_dataset()
+    ds_counter = reader.get_dataset()
 
     print(next(iter(ds_counter.take(10)))[0].shape)
     print(next(iter(ds_counter))[0].shape)

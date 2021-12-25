@@ -24,6 +24,7 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from pm4py.visualization.bpmn import visualizer as bpmn_visualizer
 from pm4py.visualization.heuristics_net import visualizer as hn_visualizer
+from sklearn import preprocessing
 
 TO_EVENT_LOG = log_converter.Variants.TO_EVENT_LOG
 
@@ -146,7 +147,16 @@ class AbstractProcessLogReader():
         self.data = self.data.drop(cols_to_remove, axis=1)
 
     def preprocess_level_specialized(self, **kwargs):
-        self.data = self.data
+        self.preprocessors = {}
+        for col in self.data.columns:
+            if col in [self.col_case_id, self.col_activity_id]:
+                continue
+            if pd.api.types.is_numeric_dtype(self.data[col]):
+                continue
+
+            self.preprocessors[col] = preprocessing.LabelEncoder().fit(self.data[col])
+            self.data[col] = self.preprocessors[col].transform(self.data[col])
+        self.data = self.data.set_index(self.col_case_id)
 
     def register_vocabulary(self):
         all_unique_tokens = list(self.data[self.col_activity_id].unique())
@@ -159,57 +169,32 @@ class AbstractProcessLogReader():
         self._vocab_r = {idx: word for word, idx in self._vocab.items()}
 
     def compute_sequences(self):
+        self.data = self.data.replace({self.col_activity_id: self._vocab})
         self.grouped_traces = list(self.data.groupby(by=self.col_case_id))
 
-        self._traces = {idx: tuple(df[self.col_activity_id].values) for idx, df in self.grouped_traces}
+        self._traces = {idx: df for idx, df in self.grouped_traces}
 
         self.length_distribution = Counter([len(tr) for tr in self._traces.values()])
         self.max_len = max(list(self.length_distribution.keys())) + 2
         self.min_len = min(list(self.length_distribution.keys())) + 2
-        self.instantiate_dataset_vector()
+        self.log_len = len(self._traces)
+        self.feature_len = len(self.data.columns)
+        self.idx_event_attribute = self.data.columns.get_loc(self.col_activity_id)
+        self.data_container = np.zeros([self.log_len, self.max_len, self.feature_len], dtype=object)
+        self.instantiate_dataset()
 
     def instantiate_dataset(self):
         print("Preprocess data")
-        loader = tqdm(self._traces.values(), total=len(self._traces))
-        start_id = [self.vocab2idx[self.start_token]]
-        end_id = [self.vocab2idx[self.end_token]]
-
-        loader = (start_id + [self.vocab2idx[word] for word in tr] + end_id for tr in loader)
-        if self.mode == TaskModes.SIMPLE:
-            self.traces = ([tr[0:], tr[1:]] for tr in loader if len(tr) > 1)
-
-        if self.mode == TaskModes.ENCODER_DECODER:
-            self.traces = ([tr[0:split], tr[split:]] for tr in loader if len(tr) > 1 for split in [random.randint(1, len(tr))])
-
-        if self.mode == TaskModes.EXTENSIVE:
-            self.traces = ([tr[0:end - 1], tr[1:end]] for tr in loader for end in range(2, len(tr) + 1) if len(tr) > 1)
-
-        if self.mode == TaskModes.EXTENSIVE_RANDOM:
-            tmp_traces = [tr[random.randint(0, len(tr) - 1):] for tr in loader for sample in self._heuristic_bounded_sample_size(tr) if len(tr) > 1]
-            self.traces = [tr[:random.randint(2, len(tr))] for tr in tqdm(tmp_traces, desc="random-samples") if len(tr) > 1]
-
-        if self.mode == TaskModes.FINAL_OUTCOME:
-            self.traces = ([tr[0:], tr[-2] * (len(tr) - 1)] for tr in loader if len(tr) > 1)
-
-        self.traces, self.targets = zip(*[tr_couple for tr_couple in tqdm(self.traces)])
-        self.padded_traces = pad_sequences(self.traces, self.max_len, padding='post')
-        self.padded_targets = pad_sequences(self.targets, self.max_len, padding='post')
-
-        self.trace_data, self.trace_test, self.target_data, self.target_test = train_test_split(self.padded_traces, self.padded_targets)
-        self.trace_train, self.trace_val, self.target_train, self.target_val = train_test_split(self.trace_data, self.target_data)
-        print(f"Test: {len(self.trace_test)} datapoints")
-        print(f"Train: {len(self.trace_train)} datapoints")
-        print(f"Val: {len(self.trace_val)} datapoints")
-
-    def instantiate_dataset_vector(self):
-        print("Preprocess data")
         loader = tqdm(self._traces.items(), total=len(self._traces))
-        start_id = [self.vocab2idx[self.start_token]]
-        end_id = [self.vocab2idx[self.end_token]]
 
-        loader = ((idx, start_id + [self.vocab2idx[word] for word in tr] + end_id) for idx, tr in loader)
+        for idx, (case_id, df) in enumerate(loader):
+            df_end = len(df) + 1
+            self.data_container[idx, 1:df_end] = df.values
+            self.data_container[idx, 0, self.idx_event_attribute] = self.vocab2idx[self.start_token]
+            self.data_container[idx, df_end, self.idx_event_attribute] = self.vocab2idx[self.start_token]
+
         if self.mode == TaskModes.SIMPLE:
-            self.traces = ([idx, tr[0:], tr[1:]] for idx, tr in loader if len(tr) > 1)
+            self.traces = self.data_container, np.roll(self.data_container, -1, axis=1)
 
         if self.mode == TaskModes.ENCODER_DECODER:
             self.traces = ([idx, tr[0:split], tr[split:]] for idx, tr in loader if len(tr) > 1 for split in [random.randint(1, len(tr))])
@@ -224,16 +209,10 @@ class AbstractProcessLogReader():
         if self.mode == TaskModes.FINAL_OUTCOME:
             self.traces = ([idx, tr[0:], tr[-2] * (len(tr) - 1)] for idx, tr in loader if len(tr) > 1)
 
-        self.trace_idx, self.traces, self.targets = zip(*[tr_couple for tr_couple in tqdm(self.traces)])
-        self.padded_traces = pad_sequences(self.traces, self.max_len, padding='post')
-        self.padded_targets = pad_sequences(self.targets, self.max_len, padding='post')
+        self.traces, self.targets = self.traces
 
-        self.trace_data, self.trace_test, self.target_data, self.target_test = train_test_split(list(zip(self.trace_idx, self.padded_traces)), self.padded_targets)
+        self.trace_data, self.trace_test, self.target_data, self.target_test = train_test_split(self.traces, self.targets)
         self.trace_train, self.trace_val, self.target_train, self.target_val = train_test_split(self.trace_data, self.target_data)
-
-        self.trace_train_idx, self.trace_train = zip(*self.trace_train)
-        self.trace_val_idx, self.trace_val = zip(*self.trace_val)
-        self.trace_test_idx, self.trace_test = zip(*self.trace_test)
 
         print(f"Test: {len(self.trace_test)} datapoints")
         print(f"Train: {len(self.trace_train)} datapoints")
@@ -245,54 +224,27 @@ class AbstractProcessLogReader():
     def _heuristic_bounded_sample_size(self, sequence):
         return range(min((len(sequence)**2 + len(sequence) // 4), 5))
 
-    def _generate_examples(self, set_name='train') -> Iterator[Dict[str, list]]:
+    def _generate_examples(self, mode: DatasetModes = DatasetModes.TRAIN) -> Iterator[Dict[str, list]]:
         """Generator of examples for each split."""
         data = None
-        set_name = set_name.decode('utf8') if type(set_name) != str else set_name
-        if set_name == 'train':
-            data = zip(self.trace_train_idx, self.trace_train, self.target_train)
-        if set_name == 'val':
-            data = zip(self.trace_val_idx, self.trace_val, self.target_val)
-        if set_name == 'test':
-            data = zip(self.trace_test_idx, self.trace_test, self.target_test)
-        for idx, trace, target in data:
-            yield trace, to_categorical(target, num_classes=self.vocab_len)
+        if mode == DatasetModes.TRAIN:
+            data = zip(self.trace_train, self.target_train)
+        if mode == DatasetModes.VAL:
+            data = zip(self.trace_val, self.target_val)
+        if mode == DatasetModes.TEST:
+            data = zip(self.trace_test, self.target_test)
+        for trace, target in data:
+            yield trace, to_categorical(target[:, self.idx_event_attribute], num_classes=self.vocab_len)
 
-    def get_train_dataset(self):
-        
-        
+    def get_dataset(self, mode: DatasetModes = DatasetModes.TRAIN):
+
         return tf.data.Dataset.from_generator(
             self._generate_examples,
-            args=['train'],
+            args=[mode],
             output_types=(tf.float32, tf.float32),
-            output_shapes=((None, ), (
-                None,
-                None,
-            )),
+            output_shapes=((self.max_len, self.feature_len), (self.max_len, self.vocab_len)),
         ).batch(1)
 
-
-    def get_val_dataset(self):
-        return tf.data.Dataset.from_generator(
-            self._generate_examples,
-            args=['val'],
-            output_types=(tf.int64, tf.int64),
-            output_shapes=((None, ), (
-                None,
-                None,
-            )),
-        ).batch(1)
-
-    def get_test_dataset(self):
-        return tf.data.Dataset.from_generator(
-            self._generate_examples,
-            args=['test'],
-            output_types=(tf.int64, tf.int64),
-            output_shapes=((None, ), (
-                None,
-                None,
-            )),
-        ).batch(1)
 
     @property
     def tokens(self) -> List[str]:
@@ -392,20 +344,20 @@ class CSVLogReader(AbstractProcessLogReader):
 
 
 if __name__ == '__main__':
-    data = AbstractProcessLogReader(
+    reader = AbstractProcessLogReader(
         log_path='data/dataset_bpic2020_tu_travel/RequestForPayment.xes',
         csv_path='data/RequestForPayment.csv',
-        mode=TaskModes.ENCODER_DECODER,
+        mode=TaskModes.SIMPLE,
     )
     # data = data.init_log(save=0)
-    data = data.init_data()
-    ds_counter = data.get_train_dataset()
+    reader = reader.init_data()
+    ds_counter = reader.get_dataset()
 
     for data_point in ds_counter:
         print(data_point[0])
         print(tf.argmax(data_point[1], axis=-1))
-    print(data.get_data_statistics())
-    print(data.get_example_trace_subset())
+    print(reader.get_data_statistics())
+    print(reader.get_example_trace_subset())
     # data.viz_dfg("white")
     # data.viz_bpmn("white")
     # data.viz_process_map("white")
