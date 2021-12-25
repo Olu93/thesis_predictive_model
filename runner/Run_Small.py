@@ -1,6 +1,6 @@
 import tensorflow as tf
 from helper.runner import Runner
-from helper.loss_functions import CrossEntropyLoss, CrossEntropyLossModified
+from helper.loss_functions import CrossEntropyLoss, CrossEntropyLossModified, SparseCrossEntropyLoss
 from models.lstm import SimpleLSTMModelOneWay, SimpleLSTMModelTwoWay
 from models.seq2seq_lstm import SeqToSeqLSTMModelOneWay
 from models.transformer import TransformerModelOneWay, TransformerModelTwoWay
@@ -16,10 +16,11 @@ if __name__ == "__main__":
     batch_size = 10
     adam_init = 0.001
     num_instances = {"num_train": None, "num_val": 100, "num_test": 1000}
-    loss_fn = CrossEntropyLoss()
+    # loss_fn = CrossEntropyLoss()
+    loss_fn = SparseCrossEntropyLoss()
     # loss_fn_mod = CrossEntropyLossModified()
-    r = Runner(data, SeqToSeqLSTMModelOneWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_csv(folder, "test")
-    # r = Runner(data, SimpleLSTMModelOneWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_csv(folder, "test")
+    # r = Runner(data, SeqToSeqLSTMModelOneWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_csv(folder, "test")
+    r = Runner(data, SimpleLSTMModelOneWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_csv(folder, "test")
     # r = Runner(data, SimpleLSTMModelTwoWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_csv(folder, "test")
     # r = Runner(data, TransformerModelOneWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_csv(folder, "test")
     # r = Runner(data, TransformerModelTwoWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_csv(folder, "test")

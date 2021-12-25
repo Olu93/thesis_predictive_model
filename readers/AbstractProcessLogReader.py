@@ -1,6 +1,6 @@
 import math
 import random
-from enum import Enum, auto
+from enum import IntEnum, auto, Enum
 from typing import Counter, Dict, Iterable, Iterator, List, Union
 import pathlib
 from matplotlib import pyplot as plt
@@ -37,10 +37,24 @@ class TaskModes(Enum):
     ENCODER_DECODER = auto()
 
 
-class DatasetModes(Enum):
+class DatasetModes(IntEnum):
     TRAIN = auto()
     VAL = auto()
     TEST = auto()
+
+
+class FeatureModes(IntEnum):
+    FULL = auto()
+    FULL_SEP = auto()
+    EVENT_ONLY = auto()
+    EVENT_TIME = auto()
+
+
+class TargetModes(IntEnum):
+    FULL = auto()
+    FULL_SEP = auto()
+    EVENT_ONLY = auto()
+    EVENT_TIME = auto()
 
 
 class AbstractProcessLogReader():
@@ -195,6 +209,7 @@ class AbstractProcessLogReader():
 
         if self.mode == TaskModes.SIMPLE:
             self.traces = self.data_container, np.roll(self.data_container, -1, axis=1)
+            self.traces[1][:, -1] = 0
 
         if self.mode == TaskModes.ENCODER_DECODER:
             self.traces = ([idx, tr[0:split], tr[split:]] for idx, tr in loader if len(tr) > 1 for split in [random.randint(1, len(tr))])
@@ -224,27 +239,53 @@ class AbstractProcessLogReader():
     def _heuristic_bounded_sample_size(self, sequence):
         return range(min((len(sequence)**2 + len(sequence) // 4), 5))
 
-    def _generate_examples(self, mode: DatasetModes = DatasetModes.TRAIN) -> Iterator[Dict[str, list]]:
+    def _generate_examples(
+            self,
+            data_mode: int = DatasetModes.TRAIN,
+            feature_mode: int = FeatureModes.EVENT_ONLY,
+            target_mode: int = TargetModes.EVENT_ONLY,
+    ) -> Iterator:
         """Generator of examples for each split."""
         data = None
-        if mode == DatasetModes.TRAIN:
-            data = zip(self.trace_train, self.target_train)
-        if mode == DatasetModes.VAL:
-            data = zip(self.trace_val, self.target_val)
-        if mode == DatasetModes.TEST:
-            data = zip(self.trace_test, self.target_test)
-        for trace, target in data:
-            yield trace, to_categorical(target[:, self.idx_event_attribute], num_classes=self.vocab_len)
 
-    def get_dataset(self, mode: DatasetModes = DatasetModes.TRAIN):
+        if DatasetModes(data_mode) == DatasetModes.TRAIN:
+            data = (self.trace_train, self.target_train)
+        if DatasetModes(data_mode) == DatasetModes.VAL:
+            data = (self.trace_val, self.target_val)
+        if DatasetModes(data_mode) == DatasetModes.TEST:
+            data = (self.trace_test, self.target_test)
+
+        features, targets = data
+        if FeatureModes(feature_mode) == FeatureModes.EVENT_ONLY:
+            features = features[:, :, self.idx_event_attribute]
+        if TargetModes(target_mode) == TargetModes.EVENT_ONLY:
+            targets = targets[:, :, self.idx_event_attribute]
+
+        for trace, target in zip(features, targets):
+            yield trace, target
+
+    def get_dataset(
+            self,
+            batch_size=1,
+            data_mode: DatasetModes = DatasetModes.TRAIN,
+            feature_mode: FeatureModes = FeatureModes.EVENT_ONLY,
+            target_mode: TargetModes = TargetModes.EVENT_ONLY,
+    ):
+        if feature_mode == FeatureModes.EVENT_ONLY:
+            feature_shapes = (self.max_len, )
+        elif feature_mode == FeatureModes.FULL:
+            feature_shapes = (self.max_len, self.feature_len)
+        if target_mode == TargetModes.EVENT_ONLY:
+            target_shapes = (self.max_len, )
+        elif target_mode == TargetModes.FULL:
+            target_shapes = (self.max_len, self.feature_len - 1 + self.vocab_len)
 
         return tf.data.Dataset.from_generator(
             self._generate_examples,
-            args=[mode],
+            args=[data_mode, feature_mode, target_mode],
             output_types=(tf.float32, tf.float32),
-            output_shapes=((self.max_len, self.feature_len), (self.max_len, self.vocab_len)),
-        ).batch(1)
-
+            output_shapes=(feature_shapes, target_shapes),
+        ).batch(batch_size)
 
     @property
     def tokens(self) -> List[str]:
@@ -351,6 +392,9 @@ if __name__ == '__main__':
     )
     # data = data.init_log(save=0)
     reader = reader.init_data()
+
+    point = next(reader._generate_examples(DatasetModes.TRAIN, FeatureModes.EVENT_ONLY, TargetModes.EVENT_ONLY))
+
     ds_counter = reader.get_dataset()
 
     for data_point in ds_counter:

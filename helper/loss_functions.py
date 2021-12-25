@@ -19,6 +19,22 @@ class CrossEntropyLoss(keras.losses.Loss):
         result = self.loss(y_true, y_pred)
         return result
 
+class SparseCrossEntropyLoss(keras.losses.Loss):
+    """
+    Args:
+      reduction: Type of tf.keras.losses.Reduction to apply to loss.
+      name: Name of the loss function.
+    """
+    def __init__(self, reduction=keras.losses.Reduction.AUTO):
+        super().__init__(reduction=reduction)
+        self.loss = tf.keras.losses.SparseCategoricalCrossentropy()
+
+    def call(self, y_true, y_pred):
+        # y_true -> (batch_size, max_seq_len, vocab_len)
+        # y_pred -> (batch_size, max_seq_len, vocab_len)
+        result = self.loss(y_true, y_pred)
+        return result
+
 
 class CrossEntropyLossModified(CrossEntropyLoss):
     def __init__(self, reduction=keras.losses.Reduction.AUTO):

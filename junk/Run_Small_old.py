@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     # data = data.init_log(save=True)
     data = data.init_data()
-    train_dataset = data.get_train_dataset().take(1000)
+    train_dataset = data.get_dataset().take(1000)
     val_dataset = data.get_val_dataset().take(100)
     test_dataset = data.get_test_dataset().take(1000)
 
