@@ -29,15 +29,15 @@ def results_by_instance_seq2seq(idx2vocab, start_id, end_id, test_dataset, model
     for instance in test_dataset:
         test_set_list.append(instance)
     X_test, y_test = zip(*test_set_list)
-    X_test, y_test = np.vstack(X_test), np.vstack(y_test).argmax(axis=-1)
-    non_zero_indices = np.nonzero(y_test)
-    non_zero_mask = np.zeros_like(y_test)
-    non_zero_mask[non_zero_indices] = 1
+    X_test, y_test = np.vstack(X_test).astype(np.int32), np.vstack(y_test).astype(np.int32)
+    # non_zero_indices = np.nonzero(y_test)
+    # non_zero_mask = np.zeros_like(y_test)
+    # non_zero_mask[non_zero_indices] = 1
 
     print(STEP2)
     eval_results = []
-    y_pred_masked = model.predict(X_test).argmax(axis=-1)
-    iterator = enumerate(zip(X_test, y_test, y_pred_masked))
+    y_pred = model.predict(X_test).argmax(axis=-1).astype(np.int32)
+    iterator = enumerate(zip(X_test, y_test, y_pred))
     for idx, (row_x_test, row_y_test, row_y_pred) in tqdm(iterator, total=len(y_test)):
         last_word_test = np.max([np.argmax(row_y_test == 0), 1])
         last_word_pred = np.max([np.argmax(row_y_pred == 0), 1])
@@ -52,7 +52,7 @@ def results_by_instance_seq2seq(idx2vocab, start_id, end_id, test_dataset, model
         }
         instance_result.update(compute_traditional_metrics(mode, row_y_test[:longer_sequence_stop], row_y_pred[:longer_sequence_stop]))
         instance_result.update(compute_sequence_metrics(row_y_test[:last_word_test], row_y_pred[:last_word_pred]))
-        instance_result.update(compute_pred_seq2seq(idx2vocab, row_y_pred[:last_word_pred], row_y_test[:last_word_test], row_x_test[:last_word_x]))
+        instance_result.update(compute_decoding(idx2vocab, row_y_pred[:last_word_pred], row_y_test[:last_word_test], row_x_test[:last_word_x]))
         eval_results.append(instance_result)
 
     results = pd.DataFrame(eval_results)
@@ -127,7 +127,7 @@ def compute_sequence_metrics(true_seq, pred_seq):
     return dict_instance_distances
 
 
-def compute_pred_seq2seq(idx2vocab, row_y_pred, row_y_test, row_x_test):
+def compute_decoding(idx2vocab, row_y_pred, row_y_test, row_x_test):
     x_convert = [f"{i:03d}" for i in row_x_test]
     return {
         "input": " | ".join(["-".join(x_convert[:lim + 1]) for lim in range(len(x_convert))]),
