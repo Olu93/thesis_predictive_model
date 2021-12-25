@@ -33,6 +33,7 @@ class RequestForPaymentLogReader(AbstractProcessLogReader):
             '_',
             regex=True,
         )
+        super().preprocess_level_specialized(**kwargs)
 
 
 if __name__ == '__main__':

@@ -43,7 +43,7 @@ class DatasetModes(IntEnum):
     TEST = auto()
 
 
-class FeatureModes(IntEnum):
+class ShapeModes(IntEnum):
     FULL = auto()
     FULL_SEP = auto()
     EVENT_ONLY = auto()
@@ -242,8 +242,8 @@ class AbstractProcessLogReader():
     def _generate_examples(
             self,
             data_mode: int = DatasetModes.TRAIN,
-            feature_mode: int = FeatureModes.EVENT_ONLY,
-            target_mode: int = FeatureModes.EVENT_ONLY,
+            feature_mode: int = ShapeModes.EVENT_ONLY,
+            target_mode: int = ShapeModes.EVENT_ONLY,
     ) -> Iterator:
         """Generator of examples for each split."""
         data = None
@@ -257,65 +257,59 @@ class AbstractProcessLogReader():
 
         features, targets = data
         feature_ids = list(range(self.feature_len))
-        if FeatureModes(feature_mode) == FeatureModes.EVENT_ONLY:
+        if ShapeModes(feature_mode) == ShapeModes.EVENT_ONLY:
             features = (features[:, :, self.idx_event_attribute],)
-        if FeatureModes(target_mode) == FeatureModes.EVENT_ONLY:
+        if ShapeModes(target_mode) == ShapeModes.EVENT_ONLY:
             targets = (targets[:, :, self.idx_event_attribute],)
-        if FeatureModes(feature_mode) == FeatureModes.FULL:
+        if ShapeModes(feature_mode) == ShapeModes.FULL:
             features = (features,)
-        if FeatureModes(target_mode) == FeatureModes.FULL:
+        if ShapeModes(target_mode) == ShapeModes.FULL:
             targets = (targets,)
-        if FeatureModes(feature_mode) == FeatureModes.FULL_SEP:
+        if ShapeModes(feature_mode) == ShapeModes.FULL_SEP:
             tmp_feature_ids = list(feature_ids)
             tmp_feature_ids.remove(self.idx_event_attribute)
             features = (features[:, :, self.idx_event_attribute], features[:, :, tmp_feature_ids])
-        if FeatureModes(target_mode) == FeatureModes.FULL_SEP:
+        if ShapeModes(target_mode) == ShapeModes.FULL_SEP:
             tmp_feature_ids = list(feature_ids)
             tmp_feature_ids.remove(self.idx_event_attribute)
             targets = (targets[:, :, self.idx_event_attribute], targets[:, :, tmp_feature_ids])
 
         for trace, target in zip(zip(*features), zip(*targets)):
-            yield {"input": trace, "target": target}
+            yield (trace, target)
 
     def get_dataset(
             self,
             batch_size=1,
             data_mode: DatasetModes = DatasetModes.TRAIN,
-            feature_mode: FeatureModes = FeatureModes.EVENT_ONLY,
-            target_mode: FeatureModes = FeatureModes.EVENT_ONLY,
+            feature_mode: ShapeModes = ShapeModes.EVENT_ONLY,
+            target_mode: ShapeModes = ShapeModes.EVENT_ONLY,
     ):
-        feature_shapes = {
-            "input": None,
-            "target": None,
-        }
-        feature_types = {
-            "input": None,
-            "target": None,
-        }
-        if feature_mode == FeatureModes.EVENT_ONLY:
-            feature_shapes["input"] = (self.max_len, )
-            feature_types["input"] = (tf.float32,)
-        if target_mode == FeatureModes.EVENT_ONLY:
-            feature_shapes["target"] = (self.max_len, )
-            feature_types["target"] = (tf.float32,)
-        if feature_mode == FeatureModes.FULL:
-            feature_shapes["input"] = (self.max_len, self.feature_len)
-            feature_types["input"] = (tf.float32,)
-        if target_mode == FeatureModes.FULL:
-            feature_shapes["target"] = (self.max_len, self.feature_len)
-            feature_types["target"] = (tf.float32,)
-        if feature_mode == FeatureModes.FULL_SEP:
-            feature_shapes["input"] = ((self.max_len,), (self.max_len, self.feature_len - 1))
-            feature_types["input"] = (tf.float32, tf.float32)
-        if target_mode == FeatureModes.FULL_SEP:
-            feature_shapes["target"] = ((self.max_len,), (self.max_len, self.feature_len - 1))
-            feature_types["target"] = (tf.float32, tf.float32)
+        feature_shapes = [None, None]
+        feature_types = [None, None]
+        if feature_mode == ShapeModes.EVENT_ONLY:
+            feature_shapes[0] = (self.max_len, )
+            feature_types[0] = (tf.float32,)
+        if target_mode == ShapeModes.EVENT_ONLY:
+            feature_shapes[1] = (self.max_len, )
+            feature_types[1] = (tf.float32,)
+        if feature_mode == ShapeModes.FULL:
+            feature_shapes[0] = (self.max_len, self.feature_len)
+            feature_types[0] = (tf.float32,)
+        if target_mode == ShapeModes.FULL:
+            feature_shapes[1] = (self.max_len, self.feature_len)
+            feature_types[1] = (tf.float32,)
+        if feature_mode == ShapeModes.FULL_SEP:
+            feature_shapes[0] = ((self.max_len,), (self.max_len, self.feature_len - 1))
+            feature_types[0] = (tf.float32, tf.float32)
+        if target_mode == ShapeModes.FULL_SEP:
+            feature_shapes[1] = ((self.max_len,), (self.max_len, self.feature_len - 1))
+            feature_types[1] = (tf.float32, tf.float32)
 
         return tf.data.Dataset.from_generator(
             self._generate_examples,
             args=[data_mode, feature_mode, target_mode],
-            output_types=feature_types,
-            output_shapes=feature_shapes,
+            output_types=tuple(feature_types),
+            output_shapes=tuple(feature_shapes),
         ).batch(batch_size)
 
     @property
@@ -424,15 +418,15 @@ if __name__ == '__main__':
     # data = data.init_log(save=0)
     reader = reader.init_data()
 
-    point = next(reader._generate_examples(DatasetModes.TRAIN, FeatureModes.FULL_SEP, FeatureModes.EVENT_ONLY))
+    point = next(reader._generate_examples(DatasetModes.TRAIN, ShapeModes.FULL_SEP, ShapeModes.EVENT_ONLY))
 
-    ds_counter = reader.get_dataset(1, DatasetModes.TRAIN, FeatureModes.FULL_SEP, FeatureModes.EVENT_ONLY)
+    ds_counter = reader.get_dataset(1, DatasetModes.TRAIN, ShapeModes.FULL_SEP, ShapeModes.EVENT_ONLY)
 
     for data_point in ds_counter:
         print("INPUT")
-        print(data_point['input'])
+        print(data_point[0])
         print("TARGET")
-        print(data_point['target'])
+        print(data_point[1])
         break
     print(reader.get_data_statistics())
     # print(reader.get_example_trace_subset())
