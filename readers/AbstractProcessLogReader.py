@@ -50,11 +50,11 @@ class FeatureModes(IntEnum):
     EVENT_TIME = auto()
 
 
-class TargetModes(IntEnum):
-    FULL = auto()
-    FULL_SEP = auto()
-    EVENT_ONLY = auto()
-    EVENT_TIME = auto()
+# class TargetModes(IntEnum):
+#     FULL = auto()
+#     FULL_SEP = auto()
+#     EVENT_ONLY = auto()
+#     EVENT_TIME = auto()
 
 
 class AbstractProcessLogReader():
@@ -194,7 +194,7 @@ class AbstractProcessLogReader():
         self.log_len = len(self._traces)
         self.feature_len = len(self.data.columns)
         self.idx_event_attribute = self.data.columns.get_loc(self.col_activity_id)
-        self.data_container = np.zeros([self.log_len, self.max_len, self.feature_len], dtype=object)
+        self.data_container = np.zeros([self.log_len, self.max_len, self.feature_len])
         self.instantiate_dataset()
 
     def instantiate_dataset(self):
@@ -243,7 +243,7 @@ class AbstractProcessLogReader():
             self,
             data_mode: int = DatasetModes.TRAIN,
             feature_mode: int = FeatureModes.EVENT_ONLY,
-            target_mode: int = TargetModes.EVENT_ONLY,
+            target_mode: int = FeatureModes.EVENT_ONLY,
     ) -> Iterator:
         """Generator of examples for each split."""
         data = None
@@ -256,35 +256,66 @@ class AbstractProcessLogReader():
             data = (self.trace_test, self.target_test)
 
         features, targets = data
+        feature_ids = list(range(self.feature_len))
         if FeatureModes(feature_mode) == FeatureModes.EVENT_ONLY:
-            features = features[:, :, self.idx_event_attribute]
-        if TargetModes(target_mode) == TargetModes.EVENT_ONLY:
-            targets = targets[:, :, self.idx_event_attribute]
+            features = (features[:, :, self.idx_event_attribute],)
+        if FeatureModes(target_mode) == FeatureModes.EVENT_ONLY:
+            targets = (targets[:, :, self.idx_event_attribute],)
+        if FeatureModes(feature_mode) == FeatureModes.FULL:
+            features = (features,)
+        if FeatureModes(target_mode) == FeatureModes.FULL:
+            targets = (targets,)
+        if FeatureModes(feature_mode) == FeatureModes.FULL_SEP:
+            tmp_feature_ids = list(feature_ids)
+            tmp_feature_ids.remove(self.idx_event_attribute)
+            features = (features[:, :, self.idx_event_attribute], features[:, :, tmp_feature_ids])
+        if FeatureModes(target_mode) == FeatureModes.FULL_SEP:
+            tmp_feature_ids = list(feature_ids)
+            tmp_feature_ids.remove(self.idx_event_attribute)
+            targets = (targets[:, :, self.idx_event_attribute], targets[:, :, tmp_feature_ids])
 
-        for trace, target in zip(features, targets):
-            yield trace, target
+        for trace, target in zip(zip(*features), zip(*targets)):
+            yield {"input": trace, "target": target}
 
     def get_dataset(
             self,
             batch_size=1,
             data_mode: DatasetModes = DatasetModes.TRAIN,
             feature_mode: FeatureModes = FeatureModes.EVENT_ONLY,
-            target_mode: TargetModes = TargetModes.EVENT_ONLY,
+            target_mode: FeatureModes = FeatureModes.EVENT_ONLY,
     ):
+        feature_shapes = {
+            "input": None,
+            "target": None,
+        }
+        feature_types = {
+            "input": None,
+            "target": None,
+        }
         if feature_mode == FeatureModes.EVENT_ONLY:
-            feature_shapes = (self.max_len, )
-        elif feature_mode == FeatureModes.FULL:
-            feature_shapes = (self.max_len, self.feature_len)
-        if target_mode == TargetModes.EVENT_ONLY:
-            target_shapes = (self.max_len, )
-        elif target_mode == TargetModes.FULL:
-            target_shapes = (self.max_len, self.feature_len - 1 + self.vocab_len)
+            feature_shapes["input"] = (self.max_len, )
+            feature_types["input"] = (tf.float32,)
+        if target_mode == FeatureModes.EVENT_ONLY:
+            feature_shapes["target"] = (self.max_len, )
+            feature_types["target"] = (tf.float32,)
+        if feature_mode == FeatureModes.FULL:
+            feature_shapes["input"] = (self.max_len, self.feature_len)
+            feature_types["input"] = (tf.float32,)
+        if target_mode == FeatureModes.FULL:
+            feature_shapes["target"] = (self.max_len, self.feature_len)
+            feature_types["target"] = (tf.float32,)
+        if feature_mode == FeatureModes.FULL_SEP:
+            feature_shapes["input"] = ((self.max_len,), (self.max_len, self.feature_len - 1))
+            feature_types["input"] = (tf.float32, tf.float32)
+        if target_mode == FeatureModes.FULL_SEP:
+            feature_shapes["target"] = ((self.max_len,), (self.max_len, self.feature_len - 1))
+            feature_types["target"] = (tf.float32, tf.float32)
 
         return tf.data.Dataset.from_generator(
             self._generate_examples,
             args=[data_mode, feature_mode, target_mode],
-            output_types=(tf.float32, tf.float32),
-            output_shapes=(feature_shapes, target_shapes),
+            output_types=feature_types,
+            output_shapes=feature_shapes,
         ).batch(batch_size)
 
     @property
@@ -393,15 +424,18 @@ if __name__ == '__main__':
     # data = data.init_log(save=0)
     reader = reader.init_data()
 
-    point = next(reader._generate_examples(DatasetModes.TRAIN, FeatureModes.EVENT_ONLY, TargetModes.EVENT_ONLY))
+    point = next(reader._generate_examples(DatasetModes.TRAIN, FeatureModes.FULL_SEP, FeatureModes.EVENT_ONLY))
 
-    ds_counter = reader.get_dataset()
+    ds_counter = reader.get_dataset(1, DatasetModes.TRAIN, FeatureModes.FULL_SEP, FeatureModes.EVENT_ONLY)
 
     for data_point in ds_counter:
-        print(data_point[0])
-        print(tf.argmax(data_point[1], axis=-1))
+        print("INPUT")
+        print(data_point['input'])
+        print("TARGET")
+        print(data_point['target'])
+        break
     print(reader.get_data_statistics())
-    print(reader.get_example_trace_subset())
+    # print(reader.get_example_trace_subset())
     # data.viz_dfg("white")
     # data.viz_bpmn("white")
     # data.viz_process_map("white")
