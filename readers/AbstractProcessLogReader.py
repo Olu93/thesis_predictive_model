@@ -240,12 +240,7 @@ class AbstractProcessLogReader():
     def _heuristic_bounded_sample_size(self, sequence):
         return range(min((len(sequence)**2 + len(sequence) // 4), 5))
 
-    def _generate_examples(
-            self,
-            data_mode: int = DatasetModes.TRAIN,
-            feature_mode: int = ShapeModes.EVENT_ONLY,
-            target_mode: int = ShapeModes.EVENT_ONLY,
-    ) -> Iterator:
+    def _generate_examples(self, data_mode: int = DatasetModes.TRAIN) -> Iterator:
         """Generator of examples for each split."""
         data = None
 
@@ -271,16 +266,14 @@ class AbstractProcessLogReader():
     def get_dataset(
             self,
             batch_size=1,
-            data_mode: DatasetModes = DatasetModes.TRAIN,
-            feature_mode: ShapeModes = ShapeModes.EVENT_ONLY,
-            target_mode: ShapeModes = ShapeModes.EVENT_ONLY,
+            data_mode: DatasetModes = DatasetModes.TRAIN
     ):
         feature_shapes = ((self.max_len, ), (self.max_len, self.feature_len), (self.max_len, self.feature_len - 1), (self.max_len, self.feature_len))
         feature_types = (tf.float32, tf.float32, tf.float32, tf.float32)
 
         return tf.data.Dataset.from_generator(
             self._generate_examples,
-            args=[data_mode, feature_mode, target_mode],
+            args=[data_mode],
             output_types=(feature_types, feature_types),
             output_shapes=(feature_shapes, feature_shapes),
         ).batch(batch_size)

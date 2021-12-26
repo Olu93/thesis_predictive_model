@@ -38,25 +38,27 @@ class SparseCrossEntropyLoss(keras.losses.Loss):
     def call(self, y_true, y_pred):
         # y_true -> (batch_size, max_seq_len, vocab_len)
         # y_pred -> (batch_size, max_seq_len, vocab_len)
-        result = self.loss(y_true[1], y_pred)
+        # tf.print(y_true.shape)
+        # tf.print(y_pred.shape)
+        result = self.loss(y_true, y_pred)
         return result
 
 
 class SparseAccuracyMetric(tf.keras.metrics.Metric):
     def __init__(self, **kwargs):
         super(SparseAccuracyMetric, self).__init__(**kwargs)
-        self.acc_value = self.add_weight(name='sparse_acc', initializer='zeros')
+        self.acc_value = self.add_weight(name='tp', initializer='zeros')
 
     def update_state(self, y_true, y_pred, sample_weight=None):
         # y_true = tf.cast(y_true[0], tf.int32)
         # y_pred = tf.cast(y_pred, tf.int32)
-        self.acc_value.assign_add(tf.keras.metrics.sparse_categorical_accuracy(y_true, y_pred))
+        self.acc_value = tf.reduce_mean(tf.keras.metrics.sparse_categorical_accuracy(y_true[0], y_pred))
 
     def result(self):
         return self.acc_value
 
     def reset_states(self):
-        self.acc_value.assign(0)
+        self.acc_value = self.add_weight(name='tp', initializer='zeros')
 
 
 class CrossEntropyLossModified(CrossEntropyLoss):

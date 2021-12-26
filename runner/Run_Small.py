@@ -19,17 +19,8 @@ if __name__ == "__main__":
     # loss_fn = CrossEntropyLoss()
     loss_fn = SparseCrossEntropyLoss()
     # loss_fn_mod = CrossEntropyLossModified()
-    # r = Runner(data, SeqToSeqLSTMModelOneWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_csv(folder, "test")
-    r = Runner(
-        data,
-        SimpleLSTMModelOneWay(data.vocab_len, data.max_len),
-        epochs,
-        batch_size,
-        adam_init,
-        ShapeModes.EVENT_ONLY,
-        ShapeModes.EVENT_ONLY,
-        **num_instances,
-    ).get_results_from_model(loss_fn).save_csv(folder, "test")
-    # r = Runner(data, SimpleLSTMModelTwoWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_csv(folder, "test")
-    # r = Runner(data, TransformerModelOneWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_csv(folder, "test")
-    # r = Runner(data, TransformerModelTwoWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_csv(folder, "test")
+    # r = Runner(data, SeqToSeqLSTMModelOneWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_results(folder, "test")
+    r = Runner(data, SimpleLSTMModelOneWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_results(folder, "test")
+    # r = Runner(data, SimpleLSTMModelTwoWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_results(folder, "test")
+    # r = Runner(data, TransformerModelOneWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_results(folder, "test")
+    # r = Runner(data, TransformerModelTwoWay(data.vocab_len, data.max_len), epochs, batch_size, adam_init, **num_instances).get_results_from_model(loss_fn).save_results(folder, "test")
