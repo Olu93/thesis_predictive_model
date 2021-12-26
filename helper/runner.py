@@ -51,14 +51,13 @@ class Runner(object):
         self.model.compile(loss=loss_fn, optimizer=Adam(self.adam_init), metrics=[SparseAccuracyMetric()])
         self.model.summary()
 
-        # vd_1 = []
-        # vd_2 = []
+        # vd_1, vd_2 = [], []
         # for datapoint in val_dataset:
         #     vd_1.extend((datapoint[0], ))
         #     vd_2.extend((datapoint[1], ))
         # for epoch in tqdm.tqdm(range(self.epochs)):
         #     for X, y in train_dataset:
-        #         train_results = self.model.fit(X, y, verbose=0)
+        #         train_results = self.model.fit(X, y[0], verbose=1)
         #         self.statistics[epoch] = {"history": train_results}
         #     val_loss, val_acc = self.model.evaluate(vd_1[0], vd_2[0])
         #     self.statistics[epoch].update({

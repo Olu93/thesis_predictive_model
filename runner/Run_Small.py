@@ -15,7 +15,7 @@ if __name__ == "__main__":
     folder = "results"
     prefix = "test"
     epochs = 1
-    batch_size = 65
+    batch_size = 1
     adam_init = 0.001
     num_instances = {"num_train": None, "num_val": 100, "num_test": 1000}
     # loss_fn = CrossEntropyLoss()
