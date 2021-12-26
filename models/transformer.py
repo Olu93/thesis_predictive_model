@@ -21,7 +21,7 @@ class TransformerModelOneWay(Model):
         self.activation_layer = Activation('softmax')
 
     def call(self, inputs):
-        x = self.embedding(inputs)
+        x = self.embedding(inputs[0])
         x = self.transformer_block(x)
         # x = self.avg_pooling_layer(x)
         x = self.dropout1(x)
@@ -33,8 +33,8 @@ class TransformerModelOneWay(Model):
         return y_pred
 
     def summary(self):
-        x = Input(shape=(self.max_len, ))
-        model = Model(inputs=[x], outputs=self.call(x))
+        x = Input(shape=(self.max_len,))
+        model = Model(inputs=[[x]], outputs=self.call([x]))
         return model.summary()
 
 
@@ -47,6 +47,7 @@ class TransformerModelTwoWay(TransformerModelOneWay):
         self.concat = tf.keras.layers.Concatenate()
 
     def call(self, inputs):
+        inputs = inputs[0]
         x = inputs
         x_reverse = self.reverse(inputs)
         x = self.embedding(x)
@@ -82,6 +83,7 @@ class TransformerBlock(layers.Layer):
         self.dropout2 = layers.Dropout(rate)
 
     def call(self, inputs, training):
+        inputs = inputs
         attn_output = self.att(inputs, inputs)
         attn_output = self.dropout1(attn_output, training=training)
         out1 = self.layernorm1(inputs + attn_output)

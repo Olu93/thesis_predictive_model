@@ -32,8 +32,8 @@ class SeqToSeqLSTMModelOneWay(Model):
         self.activation_layer = Activation('softmax')
 
     def call(self, inputs):
-        x_enc = self.lpad(self.embedding(inputs[:, :-1]))
-        x_dec = self.embedding(inputs)
+        x_enc = self.lpad(self.embedding(inputs[0][:, :-1]))
+        x_dec = self.embedding(inputs[0])
         # x_dec = self.rpad(self.embedding(inputs[:, 1:]))
         h_enc, _, _ = self.encoder(x_enc)
 
@@ -44,8 +44,8 @@ class SeqToSeqLSTMModelOneWay(Model):
         return y_pred
 
     def summary(self):
-        x = Input(shape=(self.max_len, ))
-        model = Model(inputs=[x], outputs=self.call(x))
+        x = Input(shape=(self.max_len,))
+        model = Model(inputs=[[x]], outputs=self.call([x]))
         return model.summary()
 
     def make_predict_function(self):
