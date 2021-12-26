@@ -9,10 +9,10 @@ physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 # https://keras.io/guides/functional_api/
-class VectorLSTMModelOneWay(Model):
+class FullLSTMModelOneWay(Model):
     # name = 'lstm_unidirectional'
     def __init__(self, vocab_len, max_len, feature_len, embed_dim=10, ff_dim=20):
-        super(VectorLSTMModelOneWay, self).__init__()
+        super(FullLSTMModelOneWay, self).__init__()
         self.max_len = max_len
         self.feature_len = feature_len
         # self.inputs = InputLayer(input_shape=(max_len,))
@@ -23,7 +23,7 @@ class VectorLSTMModelOneWay(Model):
         self.activation_layer = Activation('softmax')
 
     def call(self, inputs):
-        event_ids, features = inputs
+        event_ids, features = inputs[0], inputs[1]
         embeddings = self.embedding(event_ids)
         x = self.concat([embeddings, features])
         x = self.lstm_layer(x)

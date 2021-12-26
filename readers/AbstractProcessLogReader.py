@@ -257,8 +257,8 @@ class AbstractProcessLogReader():
         tmp_feature_ids.remove(self.idx_event_attribute)
         ft_events, ft_full, ft_rest, ft_empty = features[:, :, self.idx_event_attribute], features, features[:, :, tmp_feature_ids], np.zeros_like(features)
         tt_events, tt_full, tt_rest, tt_empty = targets[:, :, self.idx_event_attribute], targets, targets[:, :, tmp_feature_ids], np.zeros_like(targets)
-        res_features = (ft_events, ft_full, ft_rest, ft_empty)
-        res_targets = (tt_events, tt_full, tt_rest, tt_empty)
+        res_features = (ft_events, ft_rest, ft_full, ft_empty)
+        res_targets = (tt_events, tt_rest, tt_full, tt_empty)
 
         for trace, target in zip(zip(*res_features), zip(*res_targets)):
             yield (trace, target)
@@ -268,7 +268,7 @@ class AbstractProcessLogReader():
             batch_size=1,
             data_mode: DatasetModes = DatasetModes.TRAIN
     ):
-        feature_shapes = ((self.max_len, ), (self.max_len, self.feature_len), (self.max_len, self.feature_len - 1), (self.max_len, self.feature_len))
+        feature_shapes = ((self.max_len, ), (self.max_len, self.feature_len - 1), (self.max_len, self.feature_len), (self.max_len, self.feature_len))
         feature_types = (tf.float32, tf.float32, tf.float32, tf.float32)
 
         return tf.data.Dataset.from_generator(

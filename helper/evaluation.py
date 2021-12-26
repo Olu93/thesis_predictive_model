@@ -25,10 +25,7 @@ symbol_mapping = {index: char for index, char in enumerate(set([chr(i) for i in 
 def results_by_instance_seq2seq(idx2vocab, start_id, end_id, test_dataset, model, mode='weighted'):
     print("Start results by instance evaluation")
     print(STEP1)
-    test_set_list = list()
-    for instance in test_dataset:
-        test_set_list.append(instance)
-    X_test, y_test = zip(*test_set_list)
+    X_test, y_test = zip(*[(X[0], y[0]) for X, y in test_dataset])
     X_test, y_test = np.vstack(X_test).astype(np.int32), np.vstack(y_test).astype(np.int32)
     # non_zero_indices = np.nonzero(y_test)
     # non_zero_mask = np.zeros_like(y_test)
@@ -36,7 +33,7 @@ def results_by_instance_seq2seq(idx2vocab, start_id, end_id, test_dataset, model
 
     print(STEP2)
     eval_results = []
-    y_pred = model.predict(X_test).argmax(axis=-1).astype(np.int32)
+    y_pred = model.predict([X_test]).argmax(axis=-1).astype(np.int32)
     iterator = enumerate(zip(X_test, y_test, y_pred))
     for idx, (row_x_test, row_y_test, row_y_pred) in tqdm(iterator, total=len(y_test)):
         last_word_test = np.max([np.argmax(row_y_test == 0), 1])

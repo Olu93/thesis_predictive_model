@@ -67,7 +67,7 @@ class Runner(object):
         #         "val_loss" : val_loss,
         #         "val_acc" : val_acc,
         #     })
-        self.model.fit(train_dataset, validation_data=val_dataset, epochs=self.epochs)
+        self.history = self.model.fit(train_dataset, validation_data=val_dataset, epochs=self.epochs)
 
         self.results = results_by_instance_seq2seq(self.data.idx2vocab, self.start_id, self.end_id, test_dataset, self.model)
         return self
