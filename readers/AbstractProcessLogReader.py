@@ -26,7 +26,7 @@ from pm4py.visualization.bpmn import visualizer as bpmn_visualizer
 from pm4py.visualization.heuristics_net import visualizer as hn_visualizer
 from sklearn import preprocessing
 import itertools as it
-
+from sklearn.preprocessing import StandardScaler
 TO_EVENT_LOG = log_converter.Variants.TO_EVENT_LOG
 
 
@@ -80,7 +80,7 @@ class AbstractProcessLogReader():
                  csv_path: str,
                  col_case_id: str = 'case:concept:name',
                  col_event_id: str = 'concept:name',
-                 col_timestamp: str = 'timestamp',
+                 col_timestamp: str = 'time:timestamp',
                  debug=False,
                  mode: TaskModes = TaskModes.SIMPLE,
                  max_tokens: int = None,
@@ -94,6 +94,7 @@ class AbstractProcessLogReader():
         self.col_case_id = col_case_id
         self.col_activity_id = col_event_id
         self.col_timestamp = col_timestamp
+        self.preprocessors = {}
 
     def init_log(self, save=False):
         self.log = pm4py.read_xes(self.log_path.as_posix())
@@ -162,15 +163,38 @@ class AbstractProcessLogReader():
         self.data = self.data.drop(cols_to_remove, axis=1)
 
     def preprocess_level_specialized(self, **kwargs):
-        self.preprocessors = {}
-        for col in self.data.columns:
-            if col in [self.col_case_id, self.col_activity_id]:
+        cols = kwargs.get('cols', self.data.columns)
+        # Prepare remaining columns
+        for col in cols:
+            if col in [self.col_case_id, self.col_activity_id, self.col_timestamp]:
                 continue
             if pd.api.types.is_numeric_dtype(self.data[col]):
                 continue
 
             self.preprocessors[col] = preprocessing.LabelEncoder().fit(self.data[col])
             self.data[col] = self.preprocessors[col].transform(self.data[col])
+        
+        # Prepare timestamp
+        self.data["month"] = self.data[self.col_timestamp].dt.month
+        self.data["week"] = self.data[self.col_timestamp].dt.isocalendar().week
+        self.data["weekday"] = self.data[self.col_timestamp].dt.weekday
+        self.data["day"] = self.data[self.col_timestamp].dt.day
+        self.data["hour"] = self.data[self.col_timestamp].dt.hour
+        self.data["minute"] = self.data[self.col_timestamp].dt.minute
+        self.data["second"] = self.data[self.col_timestamp].dt.second
+        del self.data[self.col_timestamp]
+        num_encoder = StandardScaler()
+        normalization_columns = [
+            "month",
+            "week",
+            "weekday",
+            "day",
+            "hour",
+            "minute",
+            "second",
+        ]
+        self.preprocessors['time'] = num_encoder
+        self.data[normalization_columns] = num_encoder.fit_transform(self.data[normalization_columns])
         self.data = self.data.set_index(self.col_case_id)
 
     def register_vocabulary(self):
@@ -402,7 +426,7 @@ if __name__ == '__main__':
     )
     # data = data.init_log(save=0)
     reader = reader.init_data()
-    point = next(reader._generate_examples(DatasetModes.TRAIN, ShapeModes.FULL_SEP, ShapeModes.EVENT_ONLY))
+    point = next(reader._generate_examples(DatasetModes.TRAIN))
     mode_combos = list(it.product(ShapeModes, ShapeModes))
     for combo in mode_combos:
         test_dataset(reader, DatasetModes.TRAIN, *combo)
