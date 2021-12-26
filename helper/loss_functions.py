@@ -36,10 +36,8 @@ class SparseCrossEntropyLoss(keras.losses.Loss):
         self.loss = tf.keras.losses.SparseCategoricalCrossentropy()
 
     def call(self, y_true, y_pred):
-        # y_true -> (batch_size, max_seq_len, vocab_len)
-        # y_pred -> (batch_size, max_seq_len, vocab_len)
-        # tf.print(y_true.shape)
-        # tf.print(y_pred.shape)
+        # y_true = tf.boolean_mask(y_true, tf.not_equal(y_true, 0))
+        # y_pred = tf.boolean_mask(y_pred, tf.not_equal(y_true, 0))
         result = self.loss(y_true, y_pred)
         return result
 
