@@ -25,6 +25,7 @@ from sklearn.model_selection import train_test_split
 from pm4py.visualization.bpmn import visualizer as bpmn_visualizer
 from pm4py.visualization.heuristics_net import visualizer as hn_visualizer
 from sklearn import preprocessing
+import itertools as it
 
 TO_EVENT_LOG = log_converter.Variants.TO_EVENT_LOG
 
@@ -257,24 +258,14 @@ class AbstractProcessLogReader():
 
         features, targets = data
         feature_ids = list(range(self.feature_len))
-        if ShapeModes(feature_mode) == ShapeModes.EVENT_ONLY:
-            features = (features[:, :, self.idx_event_attribute],)
-        if ShapeModes(target_mode) == ShapeModes.EVENT_ONLY:
-            targets = (targets[:, :, self.idx_event_attribute],)
-        if ShapeModes(feature_mode) == ShapeModes.FULL:
-            features = (features,)
-        if ShapeModes(target_mode) == ShapeModes.FULL:
-            targets = (targets,)
-        if ShapeModes(feature_mode) == ShapeModes.FULL_SEP:
-            tmp_feature_ids = list(feature_ids)
-            tmp_feature_ids.remove(self.idx_event_attribute)
-            features = (features[:, :, self.idx_event_attribute], features[:, :, tmp_feature_ids])
-        if ShapeModes(target_mode) == ShapeModes.FULL_SEP:
-            tmp_feature_ids = list(feature_ids)
-            tmp_feature_ids.remove(self.idx_event_attribute)
-            targets = (targets[:, :, self.idx_event_attribute], targets[:, :, tmp_feature_ids])
+        tmp_feature_ids = list(feature_ids)
+        tmp_feature_ids.remove(self.idx_event_attribute)
+        ft_events, ft_full, ft_rest, ft_empty = features[:, :, self.idx_event_attribute], features, features[:, :, tmp_feature_ids], np.zeros_like(features)
+        tt_events, tt_full, tt_rest, tt_empty = targets[:, :, self.idx_event_attribute], targets, targets[:, :, tmp_feature_ids], np.zeros_like(targets)
+        res_features = (ft_events, ft_full, ft_rest, ft_empty)
+        res_targets = (tt_events, tt_full, tt_rest, tt_empty)
 
-        for trace, target in zip(zip(*features), zip(*targets)):
+        for trace, target in zip(zip(*res_features), zip(*res_targets)):
             yield (trace, target)
 
     def get_dataset(
@@ -284,32 +275,14 @@ class AbstractProcessLogReader():
             feature_mode: ShapeModes = ShapeModes.EVENT_ONLY,
             target_mode: ShapeModes = ShapeModes.EVENT_ONLY,
     ):
-        feature_shapes = [None, None]
-        feature_types = [None, None]
-        if feature_mode == ShapeModes.EVENT_ONLY:
-            feature_shapes[0] = (self.max_len, )
-            feature_types[0] = (tf.float32,)
-        if target_mode == ShapeModes.EVENT_ONLY:
-            feature_shapes[1] = (self.max_len, )
-            feature_types[1] = (tf.float32,)
-        if feature_mode == ShapeModes.FULL:
-            feature_shapes[0] = (self.max_len, self.feature_len)
-            feature_types[0] = (tf.float32,)
-        if target_mode == ShapeModes.FULL:
-            feature_shapes[1] = (self.max_len, self.feature_len)
-            feature_types[1] = (tf.float32,)
-        if feature_mode == ShapeModes.FULL_SEP:
-            feature_shapes[0] = ((self.max_len,), (self.max_len, self.feature_len - 1))
-            feature_types[0] = (tf.float32, tf.float32)
-        if target_mode == ShapeModes.FULL_SEP:
-            feature_shapes[1] = ((self.max_len,), (self.max_len, self.feature_len - 1))
-            feature_types[1] = (tf.float32, tf.float32)
+        feature_shapes = ((self.max_len, ), (self.max_len, self.feature_len), (self.max_len, self.feature_len - 1), (self.max_len, self.feature_len))
+        feature_types = (tf.float32, tf.float32, tf.float32, tf.float32)
 
         return tf.data.Dataset.from_generator(
             self._generate_examples,
             args=[data_mode, feature_mode, target_mode],
-            output_types=tuple(feature_types),
-            output_shapes=tuple(feature_shapes),
+            output_types=(feature_types, feature_types),
+            output_shapes=(feature_shapes, feature_shapes),
         ).batch(batch_size)
 
     @property
@@ -409,6 +382,25 @@ class CSVLogReader(AbstractProcessLogReader):
         return super().init_data()
 
 
+def test_dataset(reader: AbstractProcessLogReader, ds_mode=DatasetModes.TRAIN, input_mode=ShapeModes.EVENT_ONLY, target_mode=ShapeModes.EVENT_ONLY):
+    ds_counter = reader.get_dataset(1, ds_mode, input_mode, target_mode)
+
+    for data_point in ds_counter:
+        print("INPUT")
+        features = data_point[0]
+        print(features[0].shape)
+        print(features[1].shape)
+        print(features[2].shape)
+        print(features[3].shape)
+        print("TARGET")
+        targets = data_point[1]
+        print(targets[0].shape)
+        print(targets[1].shape)
+        print(targets[2].shape)
+        print(targets[3].shape)
+        break
+
+
 if __name__ == '__main__':
     reader = AbstractProcessLogReader(
         log_path='data/dataset_bpic2020_tu_travel/RequestForPayment.xes',
@@ -417,17 +409,11 @@ if __name__ == '__main__':
     )
     # data = data.init_log(save=0)
     reader = reader.init_data()
-
     point = next(reader._generate_examples(DatasetModes.TRAIN, ShapeModes.FULL_SEP, ShapeModes.EVENT_ONLY))
+    mode_combos = list(it.product(ShapeModes, ShapeModes))
+    for combo in mode_combos:
+        test_dataset(reader, DatasetModes.TRAIN, *combo)
 
-    ds_counter = reader.get_dataset(1, DatasetModes.TRAIN, ShapeModes.FULL_SEP, ShapeModes.EVENT_ONLY)
-
-    for data_point in ds_counter:
-        print("INPUT")
-        print(data_point[0])
-        print("TARGET")
-        print(data_point[1])
-        break
     print(reader.get_data_statistics())
     # print(reader.get_example_trace_subset())
     # data.viz_dfg("white")

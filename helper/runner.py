@@ -59,7 +59,7 @@ class Runner(object):
             vd_1.extend((datapoint[0], ))
             vd_2.extend((datapoint[1], ))
         for epoch in tqdm.tqdm(range(self.epochs)):
-            for datapoint in train_dataset:
+            for X, y in train_dataset:
                 train_results = self.model.fit(datapoint[0], datapoint[1][0], verbose=0)
                 self.statistics[epoch] = {"history": train_results}
             val_loss, val_acc = self.model.evaluate(vd_1[0], vd_2[0])

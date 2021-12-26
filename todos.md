@@ -42,6 +42,7 @@
     * [ ] Case-based Reasoning / Prototypes and Criticisms
     * [ ] Generative model
     * [ ] Just brute force 
+- [ ] Implement cross validation and randomization for runner (ds.even_splits('train', n=3))
 
 
 
