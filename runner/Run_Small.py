@@ -16,7 +16,7 @@ if __name__ == "__main__":
     prefix = "test"
     epochs = 1
     batch_size = 65
-    adam_init = 0.001
+    adam_init = 0.0001
     num_instances = {"num_train": None, "num_val": 100, "num_test": 1000}
     # loss_fn = CrossEntropyLoss()
     loss_fn = SparseCrossEntropyLoss()
