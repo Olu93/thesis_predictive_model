@@ -14,7 +14,7 @@ if __name__ == "__main__":
     data = data.init_data()
     folder = "results"
     prefix = "result"
-    epochs = 5
+    epochs = 10
     batch_size = 32
     adam_init = 0.001
     num_instances = {"num_train": None, "num_val": None, "num_test": None}

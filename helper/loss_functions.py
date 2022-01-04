@@ -36,17 +36,17 @@ class SparseCrossEntropyLoss(keras.losses.Loss):
         self.loss = tf.keras.losses.SparseCategoricalCrossentropy()
 
     def call(self, y_true, y_pred):
-        y_true_end = tf.argmax(tf.cast(tf.equal(y_true, 0), tf.float32), axis=-1)
-        y_pred_end = tf.argmax(tf.equal(tf.argmax(y_pred, axis=-1), 0), axis=-1)
-        longest_sequence = tf.reduce_max([y_true_end, y_pred_end], axis=0)
+        # y_true_end = tf.argmax(tf.cast(tf.equal(y_true, 0), tf.float32), axis=-1)
+        # y_pred_end = tf.argmax(tf.equal(tf.argmax(y_pred, axis=-1), 0), axis=-1)
+        # longest_sequence = tf.reduce_max([y_true_end, y_pred_end], axis=0)
+        # tf.print("longest_sequence")
+        # tf.print(longest_sequence)
+        
         # Initiate mask matrix
-        weights = tf.zeros_like(y_true)
+        weights = (tf.cast(y_true, tf.int64) + tf.argmax(y_pred, axis=-1)) != 0
         # Craft mask indices with fix in case longest sequence is 0
-        # bsize = tf.range(len(longest_sequence))
-        tmp = []
-        for num_idx in longest_sequence:
-            tmp.append(tf.concat([tf.ones(num_idx),tf.zeros(weights.shape[1]-num_idx)], axis=-1))
-        weights = tf.stack(tmp)
+        # tf.print("weights")
+        # tf.print(weights, summarize=10)
         result = self.loss(y_true, y_pred, weights)
         return result
 
