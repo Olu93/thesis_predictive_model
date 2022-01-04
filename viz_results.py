@@ -4,6 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import display
 import seaborn as sns
+import matplotlib.cm as cm
+import matplotlib.colors as colors
 
 from helper.constants import NUMBER_OF_INSTANCES, SEQUENCE_LENGTH
 # %%
@@ -20,7 +22,7 @@ def extract_plot_data(METRIC, results):
 
 
 def plot_curve(ax, res, title, color=None):
-    ax.plot(res.index, res["mean"], label=title, color=color)
+    curve = ax.plot(res.index, res["mean"], label=title, color=color)
     if color is not None:
         ax.fill_between(res.index, res["min"], res["max"], color=color, alpha=0.1)
     return ax
@@ -40,11 +42,24 @@ data = {
 }
 
 
-def plot_all(data, color="red"):
+def plot_all(data):
     fig, axes = plt.subplots(2, 2, sharey=True, sharex=True, figsize=(15, 7))
     faxes = axes.flatten()
-    for ax, (name, df) in zip(faxes, data.items()):
-        plot_curve(ax, df, title=name, color="red")
+    for idx, (ax, (name, df)) in enumerate(zip(faxes, data.items())):
+        cl = list(colors.TABLEAU_COLORS)[idx]
+        plot_curve(ax, df, title=name, color=cl)
+        ax.legend()
+        ax.set_title(f'Mean {METRIC} over {SEQUENCE_LENGTH}')
+        ax.set_ylabel(METRIC)
+        ax.set_ylim(0, 1.2)
+        ax.set_xlabel(SEQUENCE_LENGTH)
+    fig.tight_layout()
+    plt.show()
+    
+def plot_all_in_one(data):
+    fig, ax = plt.subplots(1, 1, sharey=True, sharex=True, figsize=(15, 7))
+    for name, df in data.items():
+        plot_curve(ax, df, title=name)
         ax.legend()
         ax.set_title(f'Mean {METRIC} over {SEQUENCE_LENGTH}')
         ax.set_ylabel(METRIC)
@@ -53,6 +68,7 @@ def plot_all(data, color="red"):
     fig.tight_layout()
     plt.show()
 
-plot_all(data, color="red")
+plot_all(data)
+plot_all_in_one(data)
 
 # %%
