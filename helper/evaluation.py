@@ -12,8 +12,7 @@ from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_sc
 import pandas as pd
 from tqdm import tqdm
 import textdistance
-
-from readers.BPIC12LogReader import BPIC12LogReader
+from thesis_data_readers.BPIC12LogReader import BPIC12LogReader
  
 STEP1 = "Step 1: Iterate through data"
 STEP2 = "Step 2: Compute Metrics"

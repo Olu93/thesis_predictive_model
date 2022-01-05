@@ -4,9 +4,9 @@ from helper.evaluation import FULL, results_by_instance, results_by_instance_seq
 from tensorflow.keras.optimizers import Adam
 import pathlib
 from helper.loss_functions import SparseAccuracyMetric
-from readers import AbstractProcessLogReader
+from thesis_data_readers import AbstractProcessLogReader
 
-from readers.AbstractProcessLogReader import DatasetModes, ShapeModes
+from thesis_data_readers.AbstractProcessLogReader import DatasetModes, ShapeModes
 
 
 class Runner(object):
