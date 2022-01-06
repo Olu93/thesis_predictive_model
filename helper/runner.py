@@ -5,7 +5,7 @@ import json
 from helper.evaluation import FULL, results_by_instance, results_by_instance_seq2seq, results_by_len, show_predicted_seq
 from tensorflow.keras.optimizers import Adam
 import pathlib
-from helper.loss_functions import SparseAccuracyMetric
+from helper.loss_functions import SparseAccuracyMetric, SparseCrossEntropyLoss
 from thesis_data_readers import AbstractProcessLogReader
 from thesis_data_readers.AbstractProcessLogReader import DatasetModes, ShapeModes
 
@@ -42,13 +42,15 @@ class Runner(object):
 
         self.label = model.name
 
-    def train_model(self, loss_fn="categorical_crossentropy", label=None, train_dataset=None, val_dataset=None):
+    def train_model(self, loss_fn=SparseCrossEntropyLoss(), metrics=[SparseAccuracyMetric()], label=None, train_dataset=None, val_dataset=None):
         label = label or self.label
         train_dataset = train_dataset or self.train_dataset
         val_dataset = val_dataset or self.val_dataset
+        self.metrics = metrics
+        self.loss_fn = loss_fn
 
         print(f"{label}:")
-        self.model.compile(loss=loss_fn, optimizer=Adam(self.adam_init), metrics=[SparseAccuracyMetric()])
+        self.model.compile(loss=loss_fn, optimizer=Adam(self.adam_init), metrics=metrics)
         self.model.summary()
 
         # vd_1, vd_2 = [], []

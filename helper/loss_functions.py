@@ -3,6 +3,7 @@ import tensorflow.keras as keras
 from tensorflow.keras import layers
 import numpy as np
 
+
 # https://stackoverflow.com/questions/61799546/how-to-custom-losses-by-subclass-tf-keras-losses-loss-class-in-tensorflow2-x
 class CrossEntropyLoss(keras.losses.Loss):
     """
@@ -20,6 +21,13 @@ class CrossEntropyLoss(keras.losses.Loss):
         result = self.loss(y_true, y_pred)
         return result
 
+    def get_config(self):
+        return {"reduction": self.reduction}
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+
 
 # class AccuracyMetric(keras.metrics.Metric):
 #     pass
@@ -36,12 +44,6 @@ class SparseCrossEntropyLoss(keras.losses.Loss):
         self.loss = tf.keras.losses.SparseCategoricalCrossentropy()
 
     def call(self, y_true, y_pred):
-        # y_true_end = tf.argmax(tf.cast(tf.equal(y_true, 0), tf.float32), axis=-1)
-        # y_pred_end = tf.argmax(tf.equal(tf.argmax(y_pred, axis=-1), 0), axis=-1)
-        # longest_sequence = tf.reduce_max([y_true_end, y_pred_end], axis=0)
-        # tf.print("longest_sequence")
-        # tf.print(longest_sequence)
-        
         # Initiate mask matrix
         weights = (tf.cast(y_true, tf.int64) + tf.argmax(y_pred, axis=-1)) != 0
         # Craft mask indices with fix in case longest sequence is 0
@@ -49,6 +51,14 @@ class SparseCrossEntropyLoss(keras.losses.Loss):
         # tf.print(weights, summarize=10)
         result = self.loss(y_true, y_pred, weights)
         return result
+
+    def get_config(self):
+        return {"reduction": self.reduction}
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+
 
 class SparseAccuracyMetric(tf.keras.metrics.Metric):
     def __init__(self, **kwargs):
@@ -65,6 +75,13 @@ class SparseAccuracyMetric(tf.keras.metrics.Metric):
 
     def reset_states(self):
         self.acc_value = tf.constant(0)
+
+    def get_config(self):
+        return super().get_config()
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
 
 
 class CrossEntropyLossModified(CrossEntropyLoss):
