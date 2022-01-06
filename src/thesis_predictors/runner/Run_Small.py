@@ -1,10 +1,10 @@
 import tensorflow as tf
-from helper.runner import Runner
-from helper.loss_functions import CrossEntropyLoss, CrossEntropyLossModified, SparseCrossEntropyLoss
-from models.direct_data_lstm import FullLSTMModelOneWay
-from models.lstm import SimpleLSTMModelOneWay, SimpleLSTMModelTwoWay
-from models.seq2seq_lstm import SeqToSeqLSTMModelOneWay
-from models.transformer import TransformerModelOneWay, TransformerModelTwoWay
+from ..helper.runner import Runner
+from ..helper.loss_functions import CrossEntropyLoss, CrossEntropyLossModified, SparseCrossEntropyLoss
+from ..models.direct_data_lstm import FullLSTMModelOneWay
+from ..models.lstm import SimpleLSTMModelOneWay, SimpleLSTMModelTwoWay
+from ..models.seq2seq_lstm import SeqToSeqLSTMModelOneWay
+from ..models.transformer import TransformerModelOneWay, TransformerModelTwoWay
 from thesis_data_readers.AbstractProcessLogReader import ShapeModes, TaskModes
 from thesis_data_readers import RequestForPaymentLogReader
 
