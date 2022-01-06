@@ -1,10 +1,10 @@
 import tensorflow as tf
-from helper.runner import Runner
-from helper.loss_functions import CrossEntropyLoss, CrossEntropyLossModified, SparseAccuracyMetric, SparseCrossEntropyLoss
-from models.direct_data_lstm import FullLSTMModelOneWay
-from models.lstm import SimpleLSTMModelOneWay, SimpleLSTMModelTwoWay
-from models.seq2seq_lstm import SeqToSeqLSTMModelOneWay
-from models.transformer import TransformerModelOneWay, TransformerModelTwoWay
+from ..helper.runner import Runner
+from ..helper.loss_functions import CrossEntropyLoss, CrossEntropyLossModified, SparseAccuracyMetric, SparseCrossEntropyLoss
+from ..models.direct_data_lstm import FullLSTMModelOneWay
+from ..models.lstm import SimpleLSTMModelOneWay, SimpleLSTMModelTwoWay
+from ..models.seq2seq_lstm import SeqToSeqLSTMModelOneWay
+from ..models.transformer import TransformerModelOneWay, TransformerModelTwoWay
 from thesis_data_readers.AbstractProcessLogReader import TaskModes, DatasetModes
 from thesis_data_readers import RequestForPaymentLogReader, VolvoIncidentsReader
 
@@ -14,7 +14,7 @@ if __name__ == "__main__":
     data = data.init_data()
     results_folder = "results"
     build_folder = "models_bin"
-    prefix = "result"
+    prefix = "test"
     epochs = 2
     batch_size = 128
     adam_init = 0.001
@@ -29,7 +29,7 @@ if __name__ == "__main__":
         batch_size,
         adam_init,
         **num_instances,
-    ).train_model(loss_fn, [metric])  #.evaluate(results_folder, prefix)
+    ).train_model(loss_fn, [metric])
     # https://keras.io/guides/serialization_and_saving/
     model = tf.keras.models.load_model(r5.save_model(build_folder, prefix).model_path, custom_objects={'SparseCrossEntropyLoss': loss_fn, 'SparseAccuracyMetric': metric})
     print(model.evaluate(data.get_dataset(batch_size, DatasetModes.TEST)))

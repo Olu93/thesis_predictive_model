@@ -2,12 +2,12 @@ import io
 from tensorflow.python.keras.engine.training import Model
 import tqdm
 import json
-from helper.evaluation import FULL, results_by_instance, results_by_instance_seq2seq, results_by_len, show_predicted_seq
 from tensorflow.keras.optimizers import Adam
 import pathlib
-from helper.loss_functions import SparseAccuracyMetric, SparseCrossEntropyLoss
 from thesis_data_readers import AbstractProcessLogReader
 from thesis_data_readers.AbstractProcessLogReader import DatasetModes, ShapeModes
+from ..helper.evaluation import FULL, results_by_instance, results_by_instance_seq2seq, results_by_len, show_predicted_seq
+from ..helper.loss_functions import SparseAccuracyMetric, SparseCrossEntropyLoss
 
 
 class Runner(object):
