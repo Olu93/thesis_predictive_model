@@ -42,11 +42,10 @@ class Runner(object):
 
         self.label = model.name
 
-    def get_results_from_model(self, loss_fn="categorical_crossentropy", label=None, train_dataset=None, val_dataset=None, test_dataset=None):
+    def train_model(self, loss_fn="categorical_crossentropy", label=None, train_dataset=None, val_dataset=None):
         label = label or self.label
         train_dataset = train_dataset or self.train_dataset
         val_dataset = val_dataset or self.val_dataset
-        test_dataset = test_dataset or self.test_dataset
 
         print(f"{label}:")
         self.model.compile(loss=loss_fn, optimizer=Adam(self.adam_init), metrics=[SparseAccuracyMetric()])
@@ -69,13 +68,15 @@ class Runner(object):
         #     })
         self.history = self.model.fit(train_dataset, validation_data=val_dataset, epochs=self.epochs)
 
-        self.results = results_by_instance_seq2seq(self.data.idx2vocab, self.start_id, self.end_id, test_dataset, self.model)
         return self
 
-    def save_results(self, save_path="results", prefix="full", label=None):
-        label = label or self.label
-        save_path = save_path or self.save_path
-        self.results.to_csv(pathlib.Path(save_path) / (f"{prefix}_{label}.csv"))
+    def evaluate(self, save_path="results", prefix="full", label=None, test_dataset=None, dont_save=False):
+        test_dataset = test_dataset or self.test_dataset
+        self.results = results_by_instance_seq2seq(self.data.idx2vocab, self.start_id, self.end_id, test_dataset, self.model)
+        if not dont_save:
+            label = label or self.label
+            save_path = save_path or self.save_path
+            self.results.to_csv(pathlib.Path(save_path) / (f"{prefix}_{label}.csv"))
         return self
 
     def save_model(self, save_path="build", prefix="full", label=None):
@@ -83,6 +84,7 @@ class Runner(object):
         save_path = save_path or self.save_path
         target_folder = pathlib.Path(save_path) / (f"{prefix}_{label}")
         self.model.save(target_folder)
+        self.model_path = target_folder
         json.dump(self._transform_model_history(), io.open(target_folder / 'history.json', 'w'), indent=4, sort_keys=True)
         return self
 
