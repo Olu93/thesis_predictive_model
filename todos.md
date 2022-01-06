@@ -19,6 +19,9 @@
     * [x] number of event 
     * [x] show example of the original trace
 - [ ] Implement model versions with additional data
+    * [x] With raw data features
+    * [ ] With event embeddings
+    * [ ] With trace embeddings
 - [x] Add start and end token to sequence
 - [x] Collect additional datasets
     * [x] Sepsis
@@ -38,10 +41,6 @@
     * Take x[:-1] and x[-1] to predict y
         * x[:-1] goes through encoder to get hidden state h
         * h and x[-1] goes through encoder to retrieve prediction for next x
-- [ ] Generate counterfactual examples
-    * [ ] Case-based Reasoning / Prototypes and Criticisms
-    * [ ] Generative model
-    * [ ] Just brute force 
 - [ ] Implement cross validation and randomization for runner (ds.even_splits('train', n=3))
 
 

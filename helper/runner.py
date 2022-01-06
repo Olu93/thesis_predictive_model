@@ -1,17 +1,18 @@
+import io
 from tensorflow.python.keras.engine.training import Model
 import tqdm
+import json
 from helper.evaluation import FULL, results_by_instance, results_by_instance_seq2seq, results_by_len, show_predicted_seq
 from tensorflow.keras.optimizers import Adam
 import pathlib
 from helper.loss_functions import SparseAccuracyMetric
 from thesis_data_readers import AbstractProcessLogReader
-
 from thesis_data_readers.AbstractProcessLogReader import DatasetModes, ShapeModes
 
 
 class Runner(object):
     statistics = {}
-    
+
     def __init__(self,
                  data: AbstractProcessLogReader,
                  model: Model,
@@ -76,3 +77,20 @@ class Runner(object):
         save_path = save_path or self.save_path
         self.results.to_csv(pathlib.Path(save_path) / (f"{prefix}_{label}.csv"))
         return self
+
+    def save_model(self, save_path="build", prefix="full", label=None):
+        label = label or self.label
+        save_path = save_path or self.save_path
+        target_folder = pathlib.Path(save_path) / (f"{prefix}_{label}")
+        self.model.save(target_folder)
+        json.dump(self._transform_model_history(), io.open(target_folder / 'history.json', 'w'), indent=4, sort_keys=True)
+        return self
+
+    def _transform_model_history(self):
+        tmp_history = dict(self.history.history)
+        tmp_history["epochs"] = self.history.epoch
+        history = {
+            "history": tmp_history,
+            "params": self.history.params,
+        }
+        return history
