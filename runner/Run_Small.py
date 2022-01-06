@@ -5,8 +5,8 @@ from models.direct_data_lstm import FullLSTMModelOneWay
 from models.lstm import SimpleLSTMModelOneWay, SimpleLSTMModelTwoWay
 from models.seq2seq_lstm import SeqToSeqLSTMModelOneWay
 from models.transformer import TransformerModelOneWay, TransformerModelTwoWay
-from readers.AbstractProcessLogReader import ShapeModes, TaskModes
-from readers import RequestForPaymentLogReader
+from thesis_data_readers.AbstractProcessLogReader import ShapeModes, TaskModes
+from thesis_data_readers import RequestForPaymentLogReader
 
 if __name__ == "__main__":
     data = RequestForPaymentLogReader(debug=False, mode=TaskModes.SIMPLE)
