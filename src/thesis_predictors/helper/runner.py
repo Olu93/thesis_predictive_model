@@ -7,7 +7,7 @@ import pathlib
 from thesis_data_readers import AbstractProcessLogReader
 from thesis_data_readers.AbstractProcessLogReader import DatasetModes, ShapeModes
 from ..helper.evaluation import FULL, results_by_instance, results_by_instance_seq2seq, results_by_len, show_predicted_seq
-from ..helper.loss_functions import SparseAccuracyMetric, SparseCrossEntropyLoss
+from .metrics import SparseAccuracyMetric, SparseCrossEntropyLoss
 
 
 class Runner(object):
