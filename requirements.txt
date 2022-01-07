@@ -8,5 +8,5 @@ scikit_learn==1.0.2
 seaborn==0.11.1
 tensorflow==2.4.0
 textdistance==4.2.2
-thesis_data_readers @ git+https://github.com/Olu93/thesis_data_readers.git#egg=thesis_data_readers
+-e git+https://github.com/Olu93/thesis_data_readers.git#egg=thesis_data_readers
 tqdm==4.62.3
